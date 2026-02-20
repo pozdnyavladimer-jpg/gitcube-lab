@@ -1,0 +1,19 @@
+name: GitCube Structural Check
+
+on:
+  pull_request:
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Run GitCube
+        run: |
+          python cli.py analyze . --json > report.json
+
+      - name: Comment PR
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          path: report.json
