@@ -1,117 +1,112 @@
 # -*- coding: utf-8 -*-
 """
-Meta-controller (Feedback Loop) for GitCube Memory.
+Meta-controller: Memory -> Threshold Shrink (Feedback Loop)
 
-Goal:
-- Look into recent MemoryAtoms (via MemoryStore.query)
-- If similar DNA patterns historically lead to BLOCK, shrink thresholds (be more conservative)
-- Keep BLOCK gate logic "shape" intact, only shift thresholds via multiplicative factor.
+Uses MemoryStore.query() to estimate how dangerous a DNA pattern is historically.
+If similar patterns often ended in BLOCK (and/or had hot energy bands),
+we "shrink" thresholds (make gating stricter) for the current run.
 
-Usage:
-  python -m memory.meta --report report.json --store memory/memory.jsonl
+No ML. Pure control.
 """
 
 from __future__ import annotations
 
-import argparse
-import json
+from dataclasses import dataclass
 from typing import Any, Dict, Optional
 
 from .store import MemoryStore, Query
 
 
-def _dna_prefix(dna: str, n_pairs: int = 2) -> str:
-    # "C1 L0 D2 ..." -> "C1 L0"
+def _dna_prefix(dna: str, n: int = 2) -> str:
     toks = (dna or "").strip().split()
-    return " ".join(toks[: max(1, int(n_pairs))])
+    return " ".join(toks[: max(1, int(n))])
+
+
+def _band_hotness(band: int) -> float:
+    """
+    band: 1..7 (1 = hottest / highest risk)
+    returns hotness in [0..1]
+    """
+    b = int(band or 0)
+    if b <= 0:
+        return 0.0
+    b = max(1, min(7, b))
+    return (7 - b) / 6.0
 
 
 def meta_shrink_factor(
-    report: Dict[str, Any],
-    store_path: str,
     *,
-    n_pairs: int = 2,
-    lookback: int = 200,
-    floor: float = 0.70,
-    strength: float = 0.35,
+    store_path: str,
+    dna: str,
+    kind: Optional[str] = None,
+    prefix_n: int = 2,
+    limit: int = 200,
 ) -> float:
     """
-    Returns factor in [floor..1.0]. Multiply thresholds by this factor.
-    More past BLOCK concentration for similar DNA => smaller factor.
+    Returns shrink factor in [0.65..1.0]
+    1.0 => no change, 0.8 => thresholds become 20% tighter
     """
-    dna = report.get("dna", "") or ""
-    key = _dna_prefix(dna, n_pairs=n_pairs)
-    if not key:
+    prefix = _dna_prefix(dna, prefix_n)
+    if not prefix:
         return 1.0
 
     store = MemoryStore(store_path)
-    atoms = store.query(Query(dna_contains=key, limit=lookback))
-
-    if not atoms:
+    matches = store.query(Query(kind=kind, dna_contains=prefix, limit=limit))
+    if not matches:
         return 1.0
 
-    blocks = sum(1 for a in atoms if a.get("verdict") == "BLOCK")
-    rate = blocks / max(1, len(atoms))  # 0..1
+    total = len(matches)
+    blocks = sum(1 for a in matches if a.get("verdict") == "BLOCK")
+    block_rate = blocks / max(1, total)
 
-    # shrink grows with block-rate, but bounded by floor
-    shrink = 1.0 - (strength * rate)
-    if shrink < float(floor):
-        shrink = float(floor)
-    if shrink > 1.0:
-        shrink = 1.0
-    return shrink
+    # band-weighted reflex: hot bands increase the reflex strength
+    hot_avg = 0.0
+    hot_cnt = 0
+    for a in matches:
+        if a.get("verdict") == "BLOCK":
+            hot_avg += _band_hotness(int(a.get("band", 0) or 0))
+            hot_cnt += 1
+    hot_avg = hot_avg / max(1, hot_cnt) if hot_cnt else 0.0
 
+    # Compose reflex strength (tunable, but stable & simple)
+    reflex = (0.45 * block_rate) + (0.25 * hot_avg)  # in [0..0.70] realistically
 
-def apply_meta(report: Dict[str, Any], store_path: str, **kw: Any) -> Dict[str, Any]:
-    baseline = dict(report.get("baseline") or {})
-    wt = baseline.get("warn_threshold")
-    bt = baseline.get("block_threshold")
-
-    # If thresholds are absent, do nothing (fail-safe)
-    if wt is None or bt is None:
-        report["meta"] = {"shrink": 1.0, "reason": "no_thresholds"}
-        return report
-
-    shrink = meta_shrink_factor(report, store_path, **kw)
-
-    baseline["warn_threshold"] = float(wt) * shrink
-    baseline["block_threshold"] = float(bt) * shrink
-
-    report["baseline"] = baseline
-    report["meta"] = {
-        "shrink": shrink,
-        "dna_prefix": _dna_prefix(report.get("dna", "") or "", n_pairs=int(kw.get("n_pairs", 2))),
-        "store": store_path,
-    }
-    return report
+    # Map reflex -> shrink, clamp to keep BLOCK gate rare but more cautious
+    shrink = 1.0 - min(0.35, max(0.0, reflex))  # shrink in [0.65..1.0]
+    return float(shrink)
 
 
-def main(argv: Optional[list[str]] = None) -> int:
-    p = argparse.ArgumentParser()
-    p.add_argument("--report", required=True, help="Path to HFS/GitCube report.json")
-    p.add_argument("--store", default="memory/memory.jsonl", help="Path to memory store JSONL")
-    p.add_argument("--pairs", type=int, default=2, help="How many DNA pairs to match (prefix length)")
-    p.add_argument("--lookback", type=int, default=200, help="How many recent matching atoms to consider")
-    p.add_argument("--floor", type=float, default=0.70, help="Minimum shrink factor")
-    p.add_argument("--strength", type=float, default=0.35, help="Shrink strength vs BLOCK rate")
-    args = p.parse_args(argv)
+def apply_shrink_to_baseline(baseline: Dict[str, Any], shrink: float) -> Dict[str, Any]:
+    """
+    Multiply thresholds by shrink. Keep mu/sigma unchanged.
+    """
+    out = dict(baseline or {})
+    for k in ("warn_threshold", "block_threshold"):
+        if k in out and out[k] is not None:
+            try:
+                out[k] = float(out[k]) * float(shrink)
+            except Exception:
+                pass
+    out["meta_shrink"] = float(shrink)
+    return out
 
-    with open(args.report, "r", encoding="utf-8") as f:
-        report = json.load(f)
 
-    out = apply_meta(
-        report,
-        args.store,
-        n_pairs=args.pairs,
-        lookback=args.lookback,
-        floor=args.floor,
-        strength=args.strength,
+def meta_adjust_report(
+    report: Dict[str, Any],
+    *,
+    store_path: str,
+    kind: Optional[str] = None,
+    prefix_n: int = 2,
+    limit: int = 200,
+) -> Dict[str, Any]:
+    """
+    Returns a patched report dict with baseline thresholds shrunk (meta_shrink added).
+    """
+    dna = report.get("dna", "") or ""
+    baseline = report.get("baseline", {}) or {}
+    shrink = meta_shrink_factor(
+        store_path=store_path, dna=dna, kind=kind, prefix_n=prefix_n, limit=limit
     )
-
-    # Print patched report (so you can pipe into validator / CI)
-    print(json.dumps(out, ensure_ascii=False, indent=2))
-    return 0
-
-
-if __name__ == "__main__":
-    raise SystemExit(main())
+    report = dict(report)
+    report["baseline"] = apply_shrink_to_baseline(baseline, shrink)
+    return report
