@@ -1,224 +1,219 @@
 # -*- coding: utf-8 -*-
 """
-Topological Memory Atom (network-ready)
-License: AGPL-3.0
-Author: Володимир Поздняк
-
-Goal:
-- Build a compact, verifiable "Memory Atom" from a report.json
-- Generate a stable cryptographic atom_id (sha256) from canonical content
-- Keep schema versioned for future federation
+Memory Atom (Topological Memory) — v0.2
+- Deterministic atom_id (no timestamps / repo / ref included in hash)
+- Indexed dna_key for fast, exact lookup
+- Works for both DNA alphabets:
+  - Structural DNA: C L D S H E P M
+  - HFS DNA:        T R P S C F W M
 """
 
 from __future__ import annotations
 
-from dataclasses import dataclass, asdict
-from typing import Any, Dict, Optional
 import hashlib
 import json
-import time
+from dataclasses import dataclass
+from typing import Any, Dict, Optional
 
 
-ATOM_SCHEMA_VERSION = "0.2"  # bump when canonical fields change
+def _canon(obj: Any) -> str:
+    """Canonical JSON for stable hashing."""
+    return json.dumps(obj, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
 
 
-def _canon(obj: Any) -> Any:
+def normalize_dna_key(dna: str, key_len: int = 3) -> str:
     """
-    Canonicalize objects so that hashing is stable:
-    - dict keys sorted
-    - floats rounded to stable precision
+    Normalize a DNA string into a compact deterministic key.
+
+    Accepts:
+      "DNA: T2 R1 P3 S1 C0 F0 W0 M1"
+      "C1 L0 D2 S1 H0 E1 P1 M0"
+    Returns (example):
+      "T2|R1|P3" or "C1|L0|D2"
     """
-    if isinstance(obj, dict):
-        return {k: _canon(obj[k]) for k in sorted(obj.keys())}
-    if isinstance(obj, list):
-        return [_canon(x) for x in obj]
-    if isinstance(obj, float):
-        # stable rounding (avoid tiny float differences)
-        return round(obj, 8)
-    return obj
+    s = (dna or "").strip()
+    if not s:
+        return ""
+
+    # Remove "DNA:" prefix if present
+    if s.lower().startswith("dna:"):
+        s = s.split(":", 1)[1].strip()
+
+    # Tokenize by whitespace and keep tokens like "Xn"
+    toks = []
+    for t in s.replace(",", " ").split():
+        t = t.strip()
+        if not t:
+            continue
+        # minimal sanity: starts with letter, ends with digit
+        if len(t) >= 2 and t[0].isalpha() and t[-1].isdigit():
+            toks.append(t)
+
+    toks = toks[: max(1, int(key_len))]
+    return "|".join(toks)
 
 
-def canonical_json(obj: Any) -> str:
+def _band_from_verdict(verdict: str) -> int:
     """
-    Deterministic JSON string for hashing.
+    Band 1..7 (1 = hottest / most dangerous).
+    If report already provides band, we use it. This is fallback.
     """
-    return json.dumps(_canon(obj), ensure_ascii=False, separators=(",", ":"), sort_keys=True)
+    v = (verdict or "").upper()
+    if v == "BLOCK":
+        return 1
+    if v == "WARN":
+        return 3
+    return 6
 
 
-def sha256_hex(s: str) -> str:
-    return hashlib.sha256(s.encode("utf-8")).hexdigest()
-
-
-def safe_get(d: Dict[str, Any], path: str, default=None):
-    """
-    safe_get(report, "baseline.warn_threshold")
-    """
-    cur: Any = d
-    for part in path.split("."):
-        if not isinstance(cur, dict):
-            return default
-        cur = cur.get(part, default)
-    return cur
-
-
-@dataclass
+@dataclass(frozen=True)
 class MemoryAtom:
-    schema: str
-    created_ts: float
+    kind: str
+    version: str
 
-    # identity / reference (not part of id hash by default)
-    repo: str
-    ref: str  # e.g. PR#12, commit sha, session id
+    verdict: str
+    dna: str
+    dna_key: str
 
-    # core decision
-    kind: str            # e.g. "HFS_NAVIGATOR_REPORT" / "GITCUBE_REPORT"
-    version: str         # report version
-    verdict: str         # ALLOW/WARN/BLOCK
-    dna: str             # compact signature
+    band: int  # 1..7 (1 hottest)
+    baseline: Dict[str, Any]
+    metrics: Dict[str, Any]
 
-    # thresholds (baseline)
-    mu: float
-    sigma: float
-    warn_threshold: float
-    block_threshold: float
-    last_risk: float
+    # Optional context (NOT hashed; safe to include for debugging)
+    context: Dict[str, Any]
 
-    # energy band 1..7 (optional)
-    band: Optional[int] = None
+    atom_id: str
 
-    # wave fields (optional)
-    specH: Optional[float] = None
-    cusum_drift: Optional[bool] = None
-
-    # hash id
-    atom_id: str = ""
-
-    def core_for_hash(self) -> Dict[str, Any]:
+    @staticmethod
+    def compute_atom_id(
+        kind: str,
+        version: str,
+        verdict: str,
+        dna_key: str,
+        band: int,
+        baseline: Dict[str, Any],
+        metrics: Dict[str, Any],
+    ) -> str:
         """
-        Only include fields that define the structural truth.
-        Exclude repo/ref/created_ts to make atoms comparable across nodes.
+        Deterministic ID:
+        - No timestamps
+        - No repo/ref (context)
+        - Hash only structural invariants.
         """
-        return {
-            "schema": self.schema,
-            "kind": self.kind,
-            "version": self.version,
-            "verdict": self.verdict,
-            "dna": self.dna,
-            "baseline": {
-                "mu": self.mu,
-                "sigma": self.sigma,
-                "warn_threshold": self.warn_threshold,
-                "block_threshold": self.block_threshold,
-                "last_risk": self.last_risk,
-            },
-            "band": self.band,
-            "wave": {
-                "specH": self.specH,
-                "cusum_drift": self.cusum_drift,
-            },
+        # Only keep stable baseline fields if present (avoid accidental noise)
+        bl = {
+            "mu": baseline.get("mu"),
+            "sigma": baseline.get("sigma"),
+            "warn_threshold": baseline.get("warn_threshold"),
+            "block_threshold": baseline.get("block_threshold"),
+        }
+        # Keep a small stable metrics subset if present
+        mt = {
+            "risk": metrics.get("risk", metrics.get("last_risk")),
+            "specH": metrics.get("specH"),
+            "cusum": metrics.get("cusum"),
         }
 
-    def finalize_id(self) -> None:
-        self.atom_id = sha256_hex(canonical_json(self.core_for_hash()))
+        payload = {
+            "kind": kind,
+            "version": version,
+            "verdict": (verdict or "").upper(),
+            "dna_key": dna_key,
+            "band": int(band),
+            "baseline": bl,
+            "metrics": mt,
+        }
+        h = hashlib.sha256(_canon(payload).encode("utf-8")).hexdigest()
+        return h
 
+    @classmethod
+    def from_report(
+        cls,
+        report: Dict[str, Any],
+        *,
+        key_len: int = 3,
+        repo: Optional[str] = None,
+        ref: Optional[str] = None,
+        note: Optional[str] = None,
+    ) -> "MemoryAtom":
+        """
+        Build a MemoryAtom from a GitCube/HFS report JSON.
+        """
+        kind = str(report.get("kind") or "NAVIGATOR_REPORT")
+        version = str(report.get("version") or "0.2")
 
-def _derive_band(verdict: str, last_risk: float, warn: float, block: float) -> Optional[int]:
-    """
-    Simple 1..7 "energy band" heuristic.
-    1 = hottest / highest risk, 7 = calm / low risk.
-    """
-    try:
-        if verdict == "BLOCK":
-            return 1
-        if verdict == "WARN":
-            # map how close to block
-            if block <= 1e-9:
-                return 3
-            x = clamp((last_risk - warn) / max(1e-9, (block - warn)), 0.0, 1.0)
-            return 3 if x < 0.5 else 2
-        # ALLOW: map how far below warn
-        if warn <= 1e-9:
-            return 7
-        x = clamp(last_risk / warn, 0.0, 1.0)
-        return 7 if x < 0.35 else 6 if x < 0.60 else 5
-    except Exception:
-        return None
+        verdict = str(report.get("verdict") or "ALLOW").upper()
+        dna = str(report.get("dna") or "")
+        dna_key = normalize_dna_key(dna, key_len=key_len)
 
+        baseline = report.get("baseline") or {}
+        metrics = {}
 
-def clamp(x: float, lo: float, hi: float) -> float:
-    return lo if x < lo else hi if x > hi else x
+        # Support both styles:
+        # - HFS demo: baseline.last_risk + metrics_last_window.risk (or similar)
+        # - GitCube: may have metrics dict directly
+        if "metrics" in report and isinstance(report["metrics"], dict):
+            metrics = dict(report["metrics"])
+        elif "metrics_last_window" in report and isinstance(report["metrics_last_window"], dict):
+            metrics = dict(report["metrics_last_window"])
 
+        # Add a unified risk field
+        if "risk" not in metrics:
+            if isinstance(baseline, dict) and ("last_risk" in baseline):
+                metrics["risk"] = baseline.get("last_risk")
+            else:
+                metrics["risk"] = report.get("risk")
 
-def atom_from_report(report: Dict[str, Any], repo: str, ref: str) -> MemoryAtom:
-    """
-    Supports HFS reports and (optionally) GitCube reports,
-    as long as they provide verdict/dna/baseline thresholds.
-
-    Expected minimal fields:
-      - kind, version, verdict
-      - dna (or "dna" in a different key can be mapped)
-      - baseline: mu, sigma, warn_threshold, block_threshold, last_risk
-    """
-
-    kind = str(report.get("kind", "UNKNOWN_REPORT"))
-    version = str(report.get("version", "unknown"))
-
-    verdict = str(report.get("verdict", "UNKNOWN"))
-    dna = str(report.get("dna", report.get("structural_dna", "N/A")))
-
-    # baseline layout (HFS v0.2-wave: baseline holds these keys)
-    mu = float(safe_get(report, "baseline.mu", 0.0) or 0.0)
-    sigma = float(safe_get(report, "baseline.sigma", 0.0) or 0.0)
-    warn = float(safe_get(report, "baseline.warn_threshold", 0.0) or 0.0)
-    block = float(safe_get(report, "baseline.block_threshold", 0.0) or 0.0)
-    last_risk = float(safe_get(report, "baseline.last_risk", 0.0) or 0.0)
-
-    # wave fields: from metrics_last_window.spectral_entropy or direct
-    specH = safe_get(report, "metrics_last_window.spectral_entropy", None)
-    if specH is None:
-        specH = safe_get(report, "specH", None)
-    if specH is not None:
-        specH = float(specH)
-
-    cusum = safe_get(report, "baseline.cusum_drift", None)
-    if cusum is None:
-        cusum = safe_get(report, "cusum_drift", None)
-    if cusum is not None:
-        cusum = bool(cusum)
-
-    # derive band if not present
-    band = report.get("band", None)
-    if band is None:
-        band = _derive_band(verdict, last_risk, warn, block)
-    if band is not None:
+        band = report.get("band")
+        if band is None:
+            band = _band_from_verdict(verdict)
         band = int(band)
+        if band < 1:
+            band = 1
+        if band > 7:
+            band = 7
 
-    atom = MemoryAtom(
-        schema=ATOM_SCHEMA_VERSION,
-        created_ts=time.time(),
-        repo=str(repo),
-        ref=str(ref),
-        kind=kind,
-        version=version,
-        verdict=verdict,
-        dna=dna,
-        mu=mu,
-        sigma=sigma,
-        warn_threshold=warn,
-        block_threshold=block,
-        last_risk=last_risk,
-        band=band,
-        specH=specH,
-        cusum_drift=cusum,
-        atom_id="",
-    )
-    atom.finalize_id()
-    return atom
+        context: Dict[str, Any] = {}
+        if repo:
+            context["repo"] = repo
+        if ref:
+            context["ref"] = ref
+        if note:
+            context["note"] = note
 
+        atom_id = cls.compute_atom_id(
+            kind=kind,
+            version=version,
+            verdict=verdict,
+            dna_key=dna_key,
+            band=band,
+            baseline=baseline,
+            metrics=metrics,
+        )
 
-def atom_to_json(atom: MemoryAtom) -> str:
-    return json.dumps(_canon(asdict(atom)), ensure_ascii=False)
+        return cls(
+            kind=kind,
+            version=version,
+            verdict=verdict,
+            dna=dna,
+            dna_key=dna_key,
+            band=band,
+            baseline=baseline,
+            metrics=metrics,
+            context=context,
+            atom_id=atom_id,
+        )
 
-
-def atom_to_dict(atom: MemoryAtom) -> Dict[str, Any]:
-    return _canon(asdict(atom))
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "kind": self.kind,
+            "version": self.version,
+            "atom_id": self.atom_id,
+            "verdict": self.verdict,
+            "dna": self.dna,
+            "dna_key": self.dna_key,
+            "band": self.band,
+            "baseline": self.baseline,
+            "metrics": self.metrics,
+            "context": self.context,
+        }
