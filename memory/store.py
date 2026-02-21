@@ -1,12 +1,11 @@
 # -*- coding: utf-8 -*-
-"""Append-only Memory Store (JSONL).
+"""
+Append-only Memory Store (JSONL) — v0.2
 
-Why JSONL:
-- easy diff
-- append-only (audit-friendly)
-- streamable
-
-File format: one MemoryAtom dict per line.
+Key properties:
+- append-only JSONL (audit-friendly)
+- query returns the most recent matches (tail), not the earliest ones
+- supports exact dna_key lookup (indexed-style query)
 """
 
 from __future__ import annotations
@@ -14,6 +13,7 @@ from __future__ import annotations
 import json
 import os
 from dataclasses import dataclass
+from collections import deque
 from typing import Any, Dict, Iterator, List, Optional
 
 from .atom import MemoryAtom
@@ -24,7 +24,13 @@ class Query:
     verdict: Optional[str] = None  # ALLOW/WARN/BLOCK
     band_min: Optional[int] = None
     band_max: Optional[int] = None
+
+    # exact match (preferred in v0.2)
+    dna_key: Optional[str] = None
+
+    # legacy substring fallback (optional; keep for migration)
     dna_contains: Optional[str] = None
+
     kind: Optional[str] = None
     limit: int = 50
 
@@ -54,35 +60,32 @@ class MemoryStore:
 
     def query(self, q: Query) -> List[Dict[str, Any]]:
         """
-        Returns most recent matches (tail-first logic) because JSONL is append-only.
-        This makes feedback loops behave like a living controller.
+        Returns MOST RECENT matches (tail), up to limit.
         """
-        matches: List[Dict[str, Any]] = []
+        lim = max(1, int(q.limit))
+        buf = deque(maxlen=lim)
 
         for a in self.iter_atoms():
             if q.kind and a.get("kind") != q.kind:
                 continue
-            if q.verdict and a.get("verdict") != q.verdict:
+
+            if q.verdict and str(a.get("verdict") or "").upper() != str(q.verdict).upper():
                 continue
 
-            band_raw = a.get("band", 0)
-            try:
-                band = int(band_raw or 0)
-            except Exception:
-                band = 0
-
-            if q.band_min is not None and band < q.band_min:
+            band = int(a.get("band", 0) or 0)
+            if q.band_min is not None and band < int(q.band_min):
                 continue
-            if q.band_max is not None and band > q.band_max:
-                continue
-            if q.dna_contains and q.dna_contains not in (a.get("dna") or ""):
+            if q.band_max is not None and band > int(q.band_max):
                 continue
 
-            matches.append(a)
+            if q.dna_key:
+                if (a.get("dna_key") or "") != q.dna_key:
+                    continue
+            elif q.dna_contains:
+                if q.dna_contains not in (a.get("dna") or ""):
+                    continue
 
-        # keep only most recent N
-        lim = max(1, int(q.limit))
-        if len(matches) > lim:
-            matches = matches[-lim:]
+            buf.append(a)
 
-        return matches
+        # Return in chronological order among the tail
+        return list(buf)
