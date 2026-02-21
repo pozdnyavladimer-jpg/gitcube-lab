@@ -64,3 +64,21 @@ Chaos is fuel — not an enemy.
 PR diff:
 ```diff
 + payments.api -> core.db
+## HFS Navigator (Human Function Stream)
+
+`gitcube-lab` includes **HFS** — a minimal protocol that converts *human interaction noise*
+(chat/IDE edits/pauses/topic drift) into a machine-readable **Navigator** output:
+
+- **Verdict:** `ALLOW | WARN | BLOCK`
+- **Structural DNA:** `T R P S C F W M` (compressed signature)
+- **JSON report:** designed for AI agents and CI pipelines
+
+### Run (Colab / local)
+
+```bash
+python hfs/hfs_demo.py --seed 42 --n 220 > report.json
+python hfs/ai_validator_hfs.py report.json
+### Example (BLOCK)
+
+```bash
+python hfs/hfs_demo.py --seed 99 --n 240
