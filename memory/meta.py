@@ -1,166 +1,117 @@
 # -*- coding: utf-8 -*-
 """
-Meta-controller (Feedback Loop) for Hybrid Regulator
-License: AGPL-3.0
-Author: Володимир Поздняк
+Meta-controller (Feedback Loop) for GitCube Memory.
 
-Idea:
-- Read current report.json (HFS or GitCube)
-- Look into memory.jsonl (atoms history)
-- If recent atoms show high concentration of BLOCK/WARN in similar bands,
-  reduce thresholds (become more cautious)
+Goal:
+- Look into recent MemoryAtoms (via MemoryStore.query)
+- If similar DNA patterns historically lead to BLOCK, shrink thresholds (be more conservative)
+- Keep BLOCK gate logic "shape" intact, only shift thresholds via multiplicative factor.
 
-No ML. Pure control / stats.
+Usage:
+  python -m memory.meta --report report.json --store memory/memory.jsonl
 """
 
 from __future__ import annotations
 
+import argparse
 import json
-from pathlib import Path
-from typing import Dict, Any, List, Tuple
+from typing import Any, Dict, Optional
+
+from .store import MemoryStore, Query
 
 
-def _load_json(path: Path) -> Dict[str, Any]:
-    with open(path, "r", encoding="utf-8") as f:
-        return json.load(f)
+def _dna_prefix(dna: str, n_pairs: int = 2) -> str:
+    # "C1 L0 D2 ..." -> "C1 L0"
+    toks = (dna or "").strip().split()
+    return " ".join(toks[: max(1, int(n_pairs))])
 
 
-def _iter_jsonl(path: Path):
-    if not path.exists():
-        return
-    with open(path, "r", encoding="utf-8") as f:
-        for line in f:
-            line = line.strip()
-            if not line:
-                continue
-            try:
-                yield json.loads(line)
-            except Exception:
-                continue
+def meta_shrink_factor(
+    report: Dict[str, Any],
+    store_path: str,
+    *,
+    n_pairs: int = 2,
+    lookback: int = 200,
+    floor: float = 0.70,
+    strength: float = 0.35,
+) -> float:
+    """
+    Returns factor in [floor..1.0]. Multiply thresholds by this factor.
+    More past BLOCK concentration for similar DNA => smaller factor.
+    """
+    dna = report.get("dna", "") or ""
+    key = _dna_prefix(dna, n_pairs=n_pairs)
+    if not key:
+        return 1.0
+
+    store = MemoryStore(store_path)
+    atoms = store.query(Query(dna_contains=key, limit=lookback))
+
+    if not atoms:
+        return 1.0
+
+    blocks = sum(1 for a in atoms if a.get("verdict") == "BLOCK")
+    rate = blocks / max(1, len(atoms))  # 0..1
+
+    # shrink grows with block-rate, but bounded by floor
+    shrink = 1.0 - (strength * rate)
+    if shrink < float(floor):
+        shrink = float(floor)
+    if shrink > 1.0:
+        shrink = 1.0
+    return shrink
 
 
-def _dna_prefix(dna: str) -> str:
-    # Works for "DNA: T2 R1 ..." and also "C1 L0 ..."
-    if not dna:
-        return ""
-    s = dna.replace("DNA:", "").strip()
-    parts = [p for p in s.split() if p]
-    return " ".join(parts[:3])  # tiny signature
+def apply_meta(report: Dict[str, Any], store_path: str, **kw: Any) -> Dict[str, Any]:
+    baseline = dict(report.get("baseline") or {})
+    wt = baseline.get("warn_threshold")
+    bt = baseline.get("block_threshold")
 
+    # If thresholds are absent, do nothing (fail-safe)
+    if wt is None or bt is None:
+        report["meta"] = {"shrink": 1.0, "reason": "no_thresholds"}
+        return report
 
-def adjust_thresholds(report: Dict[str, Any], store_path: Path, lookback: int = 200) -> Dict[str, Any]:
-    baseline = report.get("baseline", {}) or {}
-    warn = float(baseline.get("warn_threshold", 0.0) or 0.0)
-    block = float(baseline.get("block_threshold", 0.0) or 0.0)
+    shrink = meta_shrink_factor(report, store_path, **kw)
 
-    cur_verdict = str(report.get("verdict", "UNKNOWN"))
-    cur_dna = str(report.get("dna", report.get("structural_dna", "")) or "")
-    cur_prefix = _dna_prefix(cur_dna)
+    baseline["warn_threshold"] = float(wt) * shrink
+    baseline["block_threshold"] = float(bt) * shrink
 
-    cur_band = report.get("band", None)
-    if cur_band is None:
-        # some reports won't have band; that's OK
-        cur_band = None
-    else:
-        try:
-            cur_band = int(cur_band)
-        except Exception:
-            cur_band = None
-
-    # Load last N atoms
-    atoms: List[Dict[str, Any]] = []
-    for a in _iter_jsonl(store_path):
-        atoms.append(a)
-        if len(atoms) >= lookback:
-            atoms = atoms[-lookback:]
-
-    # Score "danger" in similar context:
-    # - strong match: same band (or band is missing)
-    # - soft match: same dna prefix (if available)
-    danger = 0.0
-    support = 0.0
-
-    for a in atoms:
-        v = str(a.get("verdict", ""))
-        band = a.get("band", None)
-        dna = str(a.get("dna", "") or "")
-        prefix = _dna_prefix(dna)
-
-        band_match = (cur_band is None) or (band == cur_band)
-        prefix_match = (not cur_prefix) or (prefix == cur_prefix)
-
-        if not band_match and not prefix_match:
-            continue
-
-        w = 1.0
-        if band_match:
-            w += 0.5
-        if prefix_match:
-            w += 0.5
-
-        support += w
-        if v == "BLOCK":
-            danger += 1.0 * w
-        elif v == "WARN":
-            danger += 0.35 * w
-
-    # If no history, no adjustment
-    if support <= 1e-9:
-        return {
-            "warn_threshold": warn,
-            "block_threshold": block,
-            "delta_warn": 0.0,
-            "delta_block": 0.0,
-            "danger_ratio": 0.0,
-            "note": "no_history",
-        }
-
-    danger_ratio = danger / support  # 0..1-ish
-    # Map danger_ratio -> shrink factor (max 20% shrink)
-    shrink = min(0.20, max(0.0, danger_ratio * 0.20))
-
-    new_warn = warn * (1.0 - shrink)
-    new_block = block * (1.0 - shrink)
-
-    return {
-        "warn_threshold": new_warn,
-        "block_threshold": new_block,
-        "delta_warn": new_warn - warn,
-        "delta_block": new_block - block,
-        "danger_ratio": danger_ratio,
-        "note": f"shrink={shrink:.3f}",
+    report["baseline"] = baseline
+    report["meta"] = {
+        "shrink": shrink,
+        "dna_prefix": _dna_prefix(report.get("dna", "") or "", n_pairs=int(kw.get("n_pairs", 2))),
+        "store": store_path,
     }
+    return report
 
 
-def main():
-    import argparse
+def main(argv: Optional[list[str]] = None) -> int:
+    p = argparse.ArgumentParser()
+    p.add_argument("--report", required=True, help="Path to HFS/GitCube report.json")
+    p.add_argument("--store", default="memory/memory.jsonl", help="Path to memory store JSONL")
+    p.add_argument("--pairs", type=int, default=2, help="How many DNA pairs to match (prefix length)")
+    p.add_argument("--lookback", type=int, default=200, help="How many recent matching atoms to consider")
+    p.add_argument("--floor", type=float, default=0.70, help="Minimum shrink factor")
+    p.add_argument("--strength", type=float, default=0.35, help="Shrink strength vs BLOCK rate")
+    args = p.parse_args(argv)
 
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--report", required=True, help="Path to report.json")
-    ap.add_argument("--store", required=True, help="Path to memory.jsonl")
-    ap.add_argument("--out", default="", help="Optional: write patched report to file")
-    ap.add_argument("--lookback", type=int, default=200)
-    args = ap.parse_args()
+    with open(args.report, "r", encoding="utf-8") as f:
+        report = json.load(f)
 
-    report_path = Path(args.report)
-    store_path = Path(args.store)
+    out = apply_meta(
+        report,
+        args.store,
+        n_pairs=args.pairs,
+        lookback=args.lookback,
+        floor=args.floor,
+        strength=args.strength,
+    )
 
-    report = _load_json(report_path)
-    adj = adjust_thresholds(report, store_path, lookback=args.lookback)
-
-    # attach meta section (do NOT overwrite original baseline)
-    report.setdefault("meta_control", {})
-    report["meta_control"]["adjustment"] = adj
-
-    print("=== META CONTROL ===")
-    print(json.dumps(adj, ensure_ascii=False, indent=2))
-
-    if args.out:
-        out_path = Path(args.out)
-        with open(out_path, "w", encoding="utf-8") as f:
-            json.dump(report, f, ensure_ascii=False, indent=2)
-        print(f"[meta] wrote patched report -> {out_path}")
+    # Print patched report (so you can pipe into validator / CI)
+    print(json.dumps(out, ensure_ascii=False, indent=2))
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())
