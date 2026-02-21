@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
 """
-Meta-controller: Memory -> Threshold Shrink (Feedback Loop)
+Meta-controller (Feedback Loop) — v0.2
 
-Uses MemoryStore.query() to estimate how dangerous a DNA pattern is historically.
-If similar patterns often ended in BLOCK (and/or had hot energy bands),
-we "shrink" thresholds (make gating stricter) for the current run.
+Goal:
+- Look at recent memory atoms for the same dna_key
+- Compute a "reflex" (how often it collapses + how hot it was)
+- Produce shrink factor for thresholds (warn/block)
 
 No ML. Pure control.
 """
@@ -12,101 +13,148 @@ No ML. Pure control.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 from .store import MemoryStore, Query
 
 
-def _dna_prefix(dna: str, n: int = 2) -> str:
-    toks = (dna or "").strip().split()
-    return " ".join(toks[: max(1, int(n))])
-
-
-def _band_hotness(band: int) -> float:
+def band_hotness(band: int) -> float:
     """
-    band: 1..7 (1 = hottest / highest risk)
-    returns hotness in [0..1]
+    Map band 1..7 to hotness 1..0
+    band=1 => 1.0 (hottest)
+    band=7 => 0.0 (cold)
     """
-    b = int(band or 0)
-    if b <= 0:
-        return 0.0
-    b = max(1, min(7, b))
+    b = int(band)
+    if b < 1:
+        b = 1
+    if b > 7:
+        b = 7
     return (7 - b) / 6.0
+
+
+@dataclass
+class MetaDecision:
+    shrink: float
+    reflex: float
+    block_rate: float
+    hot_avg: float
+    matches: int
 
 
 def meta_shrink_factor(
     *,
     store_path: str,
-    dna: str,
+    dna_key: str,
     kind: Optional[str] = None,
-    prefix_n: int = 2,
-    limit: int = 200,
-) -> float:
+    lookback: int = 200,
+) -> MetaDecision:
     """
-    Returns shrink factor in [0.65..1.0]
-    1.0 => no change, 0.8 => thresholds become 20% tighter
+    Returns shrink in [0.65..1.0]
+    - shrink=1.0 => no memory effect
+    - shrink=0.65 => maximum tightening (35% tighter)
     """
-    prefix = _dna_prefix(dna, prefix_n)
-    if not prefix:
-        return 1.0
+    if not dna_key:
+        return MetaDecision(shrink=1.0, reflex=0.0, block_rate=0.0, hot_avg=0.0, matches=0)
 
     store = MemoryStore(store_path)
-    matches = store.query(Query(kind=kind, dna_contains=prefix, limit=limit))
-    if not matches:
-        return 1.0
+    atoms = store.query(
+        Query(
+            kind=kind,
+            dna_key=dna_key,
+            limit=max(1, int(lookback)),
+        )
+    )
 
-    total = len(matches)
-    blocks = sum(1 for a in matches if a.get("verdict") == "BLOCK")
-    block_rate = blocks / max(1, total)
+    if not atoms:
+        return MetaDecision(shrink=1.0, reflex=0.0, block_rate=0.0, hot_avg=0.0, matches=0)
 
-    # band-weighted reflex: hot bands increase the reflex strength
-    hot_avg = 0.0
-    hot_cnt = 0
-    for a in matches:
-        if a.get("verdict") == "BLOCK":
-            hot_avg += _band_hotness(int(a.get("band", 0) or 0))
-            hot_cnt += 1
-    hot_avg = hot_avg / max(1, hot_cnt) if hot_cnt else 0.0
+    n = len(atoms)
+    blocks = 0
+    hot_sum = 0.0
 
-    # Compose reflex strength (tunable, but stable & simple)
-    reflex = (0.45 * block_rate) + (0.25 * hot_avg)  # in [0..0.70] realistically
+    for a in atoms:
+        v = str(a.get("verdict") or "").upper()
+        if v == "BLOCK":
+            blocks += 1
+        hot_sum += band_hotness(int(a.get("band", 7) or 7))
 
-    # Map reflex -> shrink, clamp to keep BLOCK gate rare but more cautious
-    shrink = 1.0 - min(0.35, max(0.0, reflex))  # shrink in [0.65..1.0]
-    return float(shrink)
+    block_rate = blocks / max(1, n)
+    hot_avg = hot_sum / max(1, n)
+
+    # Reflex: mix "logic" (collapse frequency) + "pain" (how hot it was)
+    reflex = (0.45 * block_rate) + (0.25 * hot_avg)
+
+    # Limit tightening to max 35%
+    max_shrink = 0.35
+    shrink = 1.0 - min(max_shrink, max(0.0, reflex))
+
+    # Safety clamp
+    if shrink < 0.65:
+        shrink = 0.65
+    if shrink > 1.0:
+        shrink = 1.0
+
+    return MetaDecision(
+        shrink=shrink,
+        reflex=reflex,
+        block_rate=block_rate,
+        hot_avg=hot_avg,
+        matches=n,
+    )
 
 
-def apply_shrink_to_baseline(baseline: Dict[str, Any], shrink: float) -> Dict[str, Any]:
-    """
-    Multiply thresholds by shrink. Keep mu/sigma unchanged.
-    """
-    out = dict(baseline or {})
-    for k in ("warn_threshold", "block_threshold"):
-        if k in out and out[k] is not None:
-            try:
-                out[k] = float(out[k]) * float(shrink)
-            except Exception:
-                pass
-    out["meta_shrink"] = float(shrink)
-    return out
-
-
-def meta_adjust_report(
+def apply_meta_to_report(
     report: Dict[str, Any],
     *,
     store_path: str,
     kind: Optional[str] = None,
-    prefix_n: int = 2,
-    limit: int = 200,
+    lookback: int = 200,
 ) -> Dict[str, Any]:
     """
-    Returns a patched report dict with baseline thresholds shrunk (meta_shrink added).
+    Mutates thresholds in report.baseline by shrink factor derived from memory.
+
+    Adds:
+      report["meta_control"] = {shrink, reflex, ...}
+      baseline["warn_threshold_meta"]
+      baseline["block_threshold_meta"]
     """
-    dna = report.get("dna", "") or ""
-    baseline = report.get("baseline", {}) or {}
-    shrink = meta_shrink_factor(
-        store_path=store_path, dna=dna, kind=kind, prefix_n=prefix_n, limit=limit
+    baseline = report.get("baseline") or {}
+    dna_key = (report.get("dna_key") or "").strip()
+
+    # If report doesn't have dna_key, fall back to parsing from dna
+    if not dna_key:
+        # try to read from atom.normalize_dna_key style tokens
+        dna = str(report.get("dna") or "")
+        # simple inline parse: take first 3 tokens like Xn
+        s = dna.strip()
+        if s.lower().startswith("dna:"):
+            s = s.split(":", 1)[1].strip()
+        toks = [t for t in s.replace(",", " ").split() if t and t[0].isalpha() and t[-1].isdigit()]
+        dna_key = "|".join(toks[:3]) if toks else ""
+
+    md = meta_shrink_factor(
+        store_path=store_path,
+        dna_key=dna_key,
+        kind=kind,
+        lookback=lookback,
     )
-    report = dict(report)
-    report["baseline"] = apply_shrink_to_baseline(baseline, shrink)
+
+    warn = baseline.get("warn_threshold")
+    block = baseline.get("block_threshold")
+
+    if isinstance(warn, (int, float)) and isinstance(block, (int, float)):
+        baseline["warn_threshold_meta"] = float(warn) * md.shrink
+        baseline["block_threshold_meta"] = float(block) * md.shrink
+
+    report["meta_control"] = {
+        "dna_key": dna_key,
+        "shrink": md.shrink,
+        "reflex": md.reflex,
+        "block_rate": md.block_rate,
+        "hot_avg": md.hot_avg,
+        "matches": md.matches,
+        "lookback": int(lookback),
+    }
+    report["baseline"] = baseline
+    report["dna_key"] = dna_key
     return report
