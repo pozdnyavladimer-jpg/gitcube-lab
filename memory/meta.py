@@ -1,134 +1,166 @@
-# memory/meta.py
+# -*- coding: utf-8 -*-
+"""
+Meta-controller (Feedback Loop) for Hybrid Regulator
+License: AGPL-3.0
+Author: Володимир Поздняк
+
+Idea:
+- Read current report.json (HFS or GitCube)
+- Look into memory.jsonl (atoms history)
+- If recent atoms show high concentration of BLOCK/WARN in similar bands,
+  reduce thresholds (become more cautious)
+
+No ML. Pure control / stats.
+"""
+
 from __future__ import annotations
-from dataclasses import dataclass
-from typing import Any, Dict, List, Optional, Tuple
 
-def _clamp(x: float, lo: float, hi: float) -> float:
-    return max(lo, min(hi, x))
+import json
+from pathlib import Path
+from typing import Dict, Any, List, Tuple
 
-def _dna_tokens(dna: str) -> List[str]:
-    """
-    DNA format examples:
-      "DNA: T2 R1 P1 S1 C0 F0 W0 M1"
-      "C1 L0 D2 S1 H0 E1 P1 M0"
-    We tokenize into ["T2","R1",...].
-    """
-    dna = dna.strip()
-    dna = dna.replace("DNA:", "").strip()
-    parts = [p.strip() for p in dna.split() if p.strip()]
-    # keep only things like "T2" or "C1"
-    toks = [p for p in parts if len(p) >= 2 and p[0].isalpha() and p[1:].isdigit()]
-    return toks
 
-def _jaccard(a: List[str], b: List[str]) -> float:
-    sa, sb = set(a), set(b)
-    if not sa and not sb:
-        return 0.0
-    return len(sa & sb) / float(len(sa | sb))
+def _load_json(path: Path) -> Dict[str, Any]:
+    with open(path, "r", encoding="utf-8") as f:
+        return json.load(f)
 
-@dataclass
-class MetaStats:
-    matched: int
-    block_rate: float
-    avg_band: float
-    avg_risk: float
-    penalty: float
-    verdict_meta: str
 
-def meta_adjust_report(
-    report: Dict[str, Any],
-    memory_items: List[Dict[str, Any]],
-    *,
-    k: int = 20,
-    min_matches: int = 3,
-    alpha_block: float = 0.18,   # how strong BLOCK history affects penalty
-    alpha_band: float = 0.06,    # band contribution
-    alpha_recency: float = 0.0,  # (optional) if you later add recency weighting
-    max_penalty: float = 0.25,
-) -> Tuple[Dict[str, Any], MetaStats]:
-    """
-    Returns: (new_report_with_meta_fields, stats)
+def _iter_jsonl(path: Path):
+    if not path.exists():
+        return
+    with open(path, "r", encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                yield json.loads(line)
+            except Exception:
+                continue
 
-    Strategy:
-      - find similar items by DNA token overlap (Jaccard)
-      - compute block_rate, avg_band, avg_risk
-      - penalty = alpha_block*block_rate + alpha_band*(avg_band/7)
-      - risk' = clamp(risk + penalty, 0, 1)
-      - verdict_meta computed using original thresholds from report (warn/block)
-    """
-    dna_now = str(report.get("dna", ""))
-    toks_now = _dna_tokens(dna_now)
 
-    kind_now = report.get("kind")
-    # score each memory atom
-    scored: List[Tuple[float, Dict[str, Any]]] = []
-    for it in memory_items:
-        if kind_now and it.get("kind") != kind_now:
-            continue
-        dna_it = str(it.get("dna", ""))
-        toks_it = _dna_tokens(dna_it)
-        sim = _jaccard(toks_now, toks_it)
+def _dna_prefix(dna: str) -> str:
+    # Works for "DNA: T2 R1 ..." and also "C1 L0 ..."
+    if not dna:
+        return ""
+    s = dna.replace("DNA:", "").strip()
+    parts = [p for p in s.split() if p]
+    return " ".join(parts[:3])  # tiny signature
 
-        # small boost if same verdict
-        if it.get("verdict") == report.get("verdict"):
-            sim += 0.05
 
-        if sim > 0.0:
-            scored.append((sim, it))
+def adjust_thresholds(report: Dict[str, Any], store_path: Path, lookback: int = 200) -> Dict[str, Any]:
+    baseline = report.get("baseline", {}) or {}
+    warn = float(baseline.get("warn_threshold", 0.0) or 0.0)
+    block = float(baseline.get("block_threshold", 0.0) or 0.0)
 
-    scored.sort(key=lambda x: x[0], reverse=True)
-    top = [it for _, it in scored[:k]]
+    cur_verdict = str(report.get("verdict", "UNKNOWN"))
+    cur_dna = str(report.get("dna", report.get("structural_dna", "")) or "")
+    cur_prefix = _dna_prefix(cur_dna)
 
-    matched = len(top)
-    if matched == 0:
-        # nothing to learn from
-        penalty = 0.0
-        risk_meta = float(report.get("risk", 0.0))
-        verdict_meta = str(report.get("verdict", "ALLOW"))
-        stats = MetaStats(0, 0.0, 0.0, 0.0, 0.0, verdict_meta)
-        out = dict(report)
-        out["meta_control"] = {"matched": 0, "penalty": 0.0, "risk_meta": risk_meta, "verdict_meta": verdict_meta}
-        return out, stats
-
-    n_block = sum(1 for it in top if it.get("verdict") == "BLOCK")
-    block_rate = n_block / float(matched)
-
-    bands = [float(it.get("band", 0.0)) for it in top if it.get("band") is not None]
-    avg_band = sum(bands) / float(len(bands)) if bands else 0.0
-
-    risks = [float(it.get("risk", 0.0)) for it in top if it.get("risk") is not None]
-    avg_risk = sum(risks) / float(len(risks)) if risks else 0.0
-
-    penalty = alpha_block * block_rate + alpha_band * (avg_band / 7.0)
-    penalty = _clamp(penalty, 0.0, max_penalty)
-
-    risk = float(report.get("risk", 0.0))
-    risk_meta = _clamp(risk + penalty, 0.0, 1.0)
-
-    warn_th = float(report.get("warn_threshold", report.get("baseline", {}).get("warn_threshold", 0.0)))
-    block_th = float(report.get("block_threshold", report.get("baseline", {}).get("block_threshold", 1.0)))
-
-    # If too few matches, don't change verdict (avoid overfitting)
-    if matched < min_matches:
-        verdict_meta = str(report.get("verdict", "ALLOW"))
+    cur_band = report.get("band", None)
+    if cur_band is None:
+        # some reports won't have band; that's OK
+        cur_band = None
     else:
-        if risk_meta > block_th:
-            verdict_meta = "BLOCK"
-        elif risk_meta > warn_th:
-            verdict_meta = "WARN"
-        else:
-            verdict_meta = "ALLOW"
+        try:
+            cur_band = int(cur_band)
+        except Exception:
+            cur_band = None
 
-    out = dict(report)
-    out["meta_control"] = {
-        "matched": matched,
-        "block_rate": block_rate,
-        "avg_band": avg_band,
-        "avg_risk": avg_risk,
-        "penalty": penalty,
-        "risk_meta": risk_meta,
-        "verdict_meta": verdict_meta,
+    # Load last N atoms
+    atoms: List[Dict[str, Any]] = []
+    for a in _iter_jsonl(store_path):
+        atoms.append(a)
+        if len(atoms) >= lookback:
+            atoms = atoms[-lookback:]
+
+    # Score "danger" in similar context:
+    # - strong match: same band (or band is missing)
+    # - soft match: same dna prefix (if available)
+    danger = 0.0
+    support = 0.0
+
+    for a in atoms:
+        v = str(a.get("verdict", ""))
+        band = a.get("band", None)
+        dna = str(a.get("dna", "") or "")
+        prefix = _dna_prefix(dna)
+
+        band_match = (cur_band is None) or (band == cur_band)
+        prefix_match = (not cur_prefix) or (prefix == cur_prefix)
+
+        if not band_match and not prefix_match:
+            continue
+
+        w = 1.0
+        if band_match:
+            w += 0.5
+        if prefix_match:
+            w += 0.5
+
+        support += w
+        if v == "BLOCK":
+            danger += 1.0 * w
+        elif v == "WARN":
+            danger += 0.35 * w
+
+    # If no history, no adjustment
+    if support <= 1e-9:
+        return {
+            "warn_threshold": warn,
+            "block_threshold": block,
+            "delta_warn": 0.0,
+            "delta_block": 0.0,
+            "danger_ratio": 0.0,
+            "note": "no_history",
+        }
+
+    danger_ratio = danger / support  # 0..1-ish
+    # Map danger_ratio -> shrink factor (max 20% shrink)
+    shrink = min(0.20, max(0.0, danger_ratio * 0.20))
+
+    new_warn = warn * (1.0 - shrink)
+    new_block = block * (1.0 - shrink)
+
+    return {
+        "warn_threshold": new_warn,
+        "block_threshold": new_block,
+        "delta_warn": new_warn - warn,
+        "delta_block": new_block - block,
+        "danger_ratio": danger_ratio,
+        "note": f"shrink={shrink:.3f}",
     }
 
-    stats = MetaStats(matched, block_rate, avg_band, avg_risk, penalty, verdict_meta)
-    return out, stats
+
+def main():
+    import argparse
+
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--report", required=True, help="Path to report.json")
+    ap.add_argument("--store", required=True, help="Path to memory.jsonl")
+    ap.add_argument("--out", default="", help="Optional: write patched report to file")
+    ap.add_argument("--lookback", type=int, default=200)
+    args = ap.parse_args()
+
+    report_path = Path(args.report)
+    store_path = Path(args.store)
+
+    report = _load_json(report_path)
+    adj = adjust_thresholds(report, store_path, lookback=args.lookback)
+
+    # attach meta section (do NOT overwrite original baseline)
+    report.setdefault("meta_control", {})
+    report["meta_control"]["adjustment"] = adj
+
+    print("=== META CONTROL ===")
+    print(json.dumps(adj, ensure_ascii=False, indent=2))
+
+    if args.out:
+        out_path = Path(args.out)
+        with open(out_path, "w", encoding="utf-8") as f:
+            json.dump(report, f, ensure_ascii=False, indent=2)
+        print(f"[meta] wrote patched report -> {out_path}")
+
+
+if __name__ == "__main__":
+    main()
