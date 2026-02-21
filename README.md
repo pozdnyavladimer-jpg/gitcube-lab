@@ -1,84 +1,153 @@
 # GitCube Lab
-### Structural DNA for Software Architecture
+**Structural DNA & Hybrid Risk Navigator**
 
-Most pull requests look harmless.
+GitCube Lab is an experimental control layer for structural systems.
 
-But some of them silently break the topology of your system.
+It reduces complex behavior — software topology or human interaction dynamics — into measurable structural signals and discrete machine decisions.
 
-GitCube compresses a repository’s dependency graph into an 8-symbol Structural DNA string.
-
-Instead of reading code,
-we read structure.
+*This is not code analysis.*
+*This is structural risk control.*
 
 ---
 
-## What is Structural DNA?
+## 1. Structural DNA (Architecture Layer)
 
-Every repository becomes a graph:
+Every repository can be represented as a directed graph:
+`G = (V, E)`
 
-G = (V, E)
+Where:
+* **V** — modules / files
+* **E** — dependencies
 
-We measure its structural invariants and encode them as:
+We compute structural invariants and compress them into an 8-symbol signature:
+`C L D S H E P M`
 
-C L D S H E P M
+**Example:**
+`DNA: C1 L0 D2 S1 H0 E1 P1 M0`
 
-Example:
-
-C1 H1 S0 D1 L0 E0 P1 M0
-
-This is a WARN state.
-Not a block. Not a panic.
-But structural pressure is rising.
-
----
-
-## The 8 Symbols
+Each symbol represents:
 
 | Symbol | Meaning |
-|--------|----------|
-| C | Cycles / SCC risk |
-| L | Layer violations |
-| D | Dependency density |
-| S | Structural drift |
-| H | Structural entropy |
-| E | Entropy lead (early signal) |
-| P | Architectural pressure |
-| M | Critical state (Meru Gate → BLOCK) |
+| :---: | :--- |
+| **C** | Cycles / SCC risk |
+| **L** | Layer violations |
+| **D** | Dependency density |
+| **S** | Structural drift |
+| **H** | Structural entropy |
+| **E** | Entropy lead (early instability signal) |
+| **P** | Architectural pressure |
+| **M** | Critical state (BLOCK gate) |
+
+This compressed string is called **Structural DNA**.
 
 ---
 
-## Verdict Logic
+## 2. Verdict Logic (Hybrid Control Model)
 
-ALLOW  → all metrics stable  
-WARN   → structural pressure detected  
-BLOCK  → critical topology violation  
+Internally, GitCube computes a continuous structural risk value:
+`risk ∈ [0, 1]`
 
-BLOCK is rare.
-WARN is normal evolution.
-Chaos is fuel — not an enemy.
+Adaptive baseline is calculated per repository:
+```text
+warn_threshold = μ + 2σ
+block_threshold = μ + 3σ
+```
+
+Discrete output:
+* `risk ≤ warn_threshold` → **ALLOW**
+* `warn_threshold < risk ≤ block_threshold` → **WARN**
+* `risk > block_threshold` → **BLOCK**
+
+This is a hybrid regulator:
+* **Continuous signal inside.**
+* **Discrete decision outside.**
+
+**BLOCK** is rare. **WARN** is normal evolution. Noise is measured — not punished.
 
 ---
 
-## Example
+## 3. HFS — Human Function Stream (Cognitive Layer)
 
-PR diff:
-```diff
-+ payments.api -> core.db
-## HFS Navigator (Human Function Stream)
+GitCube Lab also includes HFS, a minimal append-only protocol that converts human interaction dynamics into structural signals.
 
-`gitcube-lab` includes **HFS** — a minimal protocol that converts *human interaction noise*
-(chat/IDE edits/pauses/topic drift) into a machine-readable **Navigator** output:
+**Input stream:**
+chat messages → edits → pauses → topic drift → volatility
 
-- **Verdict:** `ALLOW | WARN | BLOCK`
-- **Structural DNA:** `T R P S C F W M` (compressed signature)
-- **JSON report:** designed for AI agents and CI pipelines
+From this we compute:
+`T R P S C F W M`
 
-### Run (Colab / local)
+| Symbol | Meaning |
+| :---: | :--- |
+| **T** | Topic drift |
+| **R** | Rewrite rate |
+| **P** | Pressure spike |
+| **S** | Stability gain |
+| **C** | Contradiction rate |
+| **F** | Focus lock |
+| **W** | Warn band active |
+| **M** | Meltdown gate (BLOCK) |
+
+Output is a compact DNA signature + verdict.
+
+---
+
+## 4. Demo
+
+Run locally or in Colab:
 
 ```bash
-python hfs/hfs_demo.py --seed 42 --n 220 > report.json
+python hfs/hfs_demo.py --seed 99 --n 240 > report.json
 python hfs/ai_validator_hfs.py report.json
-### Example (BLOCK)
+```
 
-```bash
-python hfs/hfs_demo.py --seed 99 --n 240
+**Example output:**
+```text
+Verdict: BLOCK
+DNA: T2 R1 P1 S1 C0 F0 W0 M1
+Risk: 0.3678
+Block threshold: 0.3505
+Recommendation: Stop. Reduce drift. Pick 1 goal. Write 3 steps.
+```
+
+The system does not interpret meaning. It measures instability.
+
+---
+
+## 5. Why This Exists
+
+Modern AI systems generate content.
+**GitCube Lab measures structure.**
+
+It can:
+* detect structural pressure
+* identify instability before collapse
+* act as a gating mechanism in CI/CD
+* act as a cognitive navigator in interaction systems
+
+This is a control layer, not a language model.
+
+---
+
+## 6. Project Status
+
+Experimental research prototype (v0.1)
+
+**Focus areas:**
+* Structural graph invariants
+* Adaptive baselining
+* Hybrid control logic
+* Human interaction volatility modeling
+
+**Repository Structure:**
+```text
+hfs/
+  hfs_schema.md
+  hfs_demo.py
+  ai_validator_hfs.py
+docs/
+  topological-alphabet.md
+```
+
+**License:** AGPL-3.0
+
+If you are interested in graph theory applications, hybrid control systems, AI risk gating, or structural entropy modeling — **open an issue or start a discussion.**
