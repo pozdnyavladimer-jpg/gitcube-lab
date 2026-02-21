@@ -1,66 +1,82 @@
 # GitCube Lab
-**Structural DNA & Hybrid Risk Navigator**
+**Structural Risk Control for Graph Systems & Interaction Dynamics**
 
-GitCube Lab is an experimental control layer for structural systems.
+GitCube Lab is an experimental hybrid control layer that converts structural complexity into measurable risk signals and discrete machine decisions. 
 
-It reduces complex behavior — software topology or human interaction dynamics — into measurable structural signals and discrete machine decisions.
+It operates on:
+- Software architecture graphs (Structural DNA)
+- Human interaction streams (HFS — Human Function Stream)
 
-*This is not code analysis.*
-*This is structural risk control.*
+*This is not NLP. This is not sentiment analysis. This is structural instability modeling.*
+
+---
+
+## TL;DR
+
+**GitCube Lab:**
+1. Extracts structural invariants from graphs or interaction streams
+2. Aggregates them into a continuous risk signal (0..1)
+3. Computes adaptive thresholds (μ + kσ)
+4. Produces a discrete decision: ALLOW / WARN / BLOCK
+5. Optionally persists structural state as compact Memory Atoms
+
+**Use it as:**
+- CI/CD gating layer
+- Architectural drift detector
+- Structural instability monitor
+- Cognitive volatility regulator
 
 ---
 
 ## 1. Structural DNA (Architecture Layer)
 
-Every repository can be represented as a directed graph:
-`G = (V, E)`
-
+Any repository can be represented as a directed graph: `G = (V, E)`
 Where:
-* **V** — modules / files
-* **E** — dependencies
+- **V** — modules / files
+- **E** — dependencies
 
-We compute structural invariants and compress them into an 8-symbol signature:
+GitCube computes structural invariants and compresses them into an 8-symbol signature:
 `C L D S H E P M`
 
 **Example:**
 `DNA: C1 L0 D2 S1 H0 E1 P1 M0`
 
-Each symbol represents:
+### Symbol Meaning
 
-| Symbol | Meaning |
+| Symbol | Description |
 | :---: | :--- |
-| **C** | Cycles / SCC risk |
+| **C** | Cycles / strongly connected components risk |
 | **L** | Layer violations |
 | **D** | Dependency density |
 | **S** | Structural drift |
 | **H** | Structural entropy |
 | **E** | Entropy lead (early instability signal) |
 | **P** | Architectural pressure |
-| **M** | Critical state (BLOCK gate) |
+| **M** | Critical state (BLOCK gate trigger) |
 
-This compressed string is called **Structural DNA**.
+This compressed signature is called **Structural DNA**. It represents topology — not semantics.
 
 ---
 
-## 2. Verdict Logic (Hybrid Control Model)
+## 2. Hybrid Control Model
 
-Internally, GitCube computes a continuous structural risk value:
+Internally, GitCube computes:
 `risk ∈ [0, 1]`
 
-Adaptive baseline is calculated per repository:
+Risk is continuous. Each repository maintains its own adaptive baseline:
 ```text
 warn_threshold = μ + 2σ
 block_threshold = μ + 3σ
 ```
 
-Discrete output:
-* `risk ≤ warn_threshold` → **ALLOW**
-* `warn_threshold < risk ≤ block_threshold` → **WARN**
-* `risk > block_threshold` → **BLOCK**
+Discrete decision logic:
+- `risk ≤ warn_threshold` → **ALLOW**
+- `warn_threshold < risk ≤ block_threshold` → **WARN**
+- `risk > block_threshold` → **BLOCK**
 
-This is a hybrid regulator:
-* **Continuous signal inside.**
-* **Discrete decision outside.**
+This creates a hybrid regulator:
+* **Continuous signal inside**
+* **Discrete control outside**
 
 **BLOCK** is rare. **WARN** is normal evolution. Noise is measured — not punished.
 
@@ -68,15 +84,15 @@ This is a hybrid regulator:
 
 ## 3. HFS — Human Function Stream (Cognitive Layer)
 
-GitCube Lab also includes HFS, a minimal append-only protocol that converts human interaction dynamics into structural signals.
+HFS models structural volatility in interaction systems.
 
 **Input stream:**
 chat messages → edits → pauses → topic drift → volatility
 
-From this we compute:
+**Extracted signature:**
 `T R P S C F W M`
 
-| Symbol | Meaning |
+| Symbol | Description |
 | :---: | :--- |
 | **T** | Topic drift |
 | **R** | Rewrite rate |
@@ -84,14 +100,67 @@ From this we compute:
 | **S** | Stability gain |
 | **C** | Contradiction rate |
 | **F** | Focus lock |
-| **W** | Warn band active |
+| **W** | Warn band activation |
 | **M** | Meltdown gate (BLOCK) |
 
-Output is a compact DNA signature + verdict.
+**Output:**
+- Compact DNA signature
+- Continuous risk
+- Discrete verdict
+
+The system does not interpret meaning. It measures structural instability.
 
 ---
 
-## 4. Demo
+## 4. System Flow
+
+```text
+Graph / Interaction Stream 
+  ↓ 
+Structural Metrics 
+  ↓ 
+Risk Aggregator (continuous) 
+  ↓ 
+Adaptive Baseline (μ, σ) 
+  ↓ 
+Discrete Gate (ALLOW / WARN / BLOCK) 
+  ↓ 
+Optional: Memory Atom persistence
+```
+
+---
+
+## 5. Memory Atoms (Topological Memory)
+
+GitCube can persist reports as compact structural records. Instead of storing raw logs, it stores invariants:
+- verdict
+- DNA
+- baseline (μ, σ, thresholds)
+- energy band (1–7)
+- risk
+
+**Record an Atom:**
+```bash
+python -m memory.cli record \
+  --report report.json \
+  --store memory/memory.jsonl \
+  --repo your/repo \
+  --ref PR#12
+```
+
+**Query Atoms:**
+```bash
+python -m memory.cli query \
+  --store memory/memory.jsonl \
+  --verdict BLOCK \
+  --limit 10
+```
+
+This enables structural feedback loops and historical instability analysis.
+
+---
+
+## 6. Demo
 
 Run locally or in Colab:
 
@@ -109,45 +178,45 @@ Block threshold: 0.3505
 Recommendation: Stop. Reduce drift. Pick 1 goal. Write 3 steps.
 ```
 
-The system does not interpret meaning. It measures instability.
+---
+
+## 7. Practical Use Cases
+
+- CI structural gating
+- Architectural pressure detection
+- Early entropy signal monitoring
+- AI agent meta-control layer
+- Cognitive volatility regulation
+
+*This is a control system — not a language model.*
 
 ---
 
-## 5. Why This Exists
-
-Modern AI systems generate content.
-**GitCube Lab measures structure.**
-
-It can:
-* detect structural pressure
-* identify instability before collapse
-* act as a gating mechanism in CI/CD
-* act as a cognitive navigator in interaction systems
-
-This is a control layer, not a language model.
-
----
-
-## 6. Project Status
+## 8. Project Status
 
 Experimental research prototype (v0.1)
 
 **Focus areas:**
-* Structural graph invariants
-* Adaptive baselining
-* Hybrid control logic
-* Human interaction volatility modeling
+- Graph invariants
+- Adaptive baselining
+- Hybrid control theory
+- Structural entropy modeling
+- Human interaction dynamics
 
-**Repository Structure:**
+**Repository structure:**
 ```text
 hfs/
   hfs_schema.md
   hfs_demo.py
   ai_validator_hfs.py
+memory/
+  atom.py
+  store.py
+  cli.py
 docs/
   topological-alphabet.md
 ```
 
 **License:** AGPL-3.0
 
-If you are interested in graph theory applications, hybrid control systems, AI risk gating, or structural entropy modeling — **open an issue or start a discussion.**
+If you are interested in graph theory applications, hybrid control systems, structural AI risk gating, or topological memory systems — **open an issue or start a discussion.**
