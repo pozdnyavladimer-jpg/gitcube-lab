@@ -14,12 +14,17 @@ from __future__ import annotations
 
 import argparse
 import json
-import sys
+import time
 from typing import Any, Dict, Optional
 
-from .atom import MemoryAtom, now_ts
+from .atom import MemoryAtom
 from .bands import risk_to_band
 from .store import MemoryStore, Query
+
+
+def now_ts() -> float:
+    """Timestamp for storage context (NOT part of atom identity)."""
+    return time.time()
 
 
 def _get(d: Dict[str, Any], *path: str, default=None):
@@ -33,7 +38,9 @@ def _get(d: Dict[str, Any], *path: str, default=None):
     return cur
 
 
-def atom_from_report(report: Dict[str, Any], *, repo: Optional[str], ref: Optional[str], note: Optional[str]) -> MemoryAtom:
+def atom_from_report(
+    report: Dict[str, Any], *, repo: Optional[str], ref: Optional[str], note: Optional[str]
+) -> MemoryAtom:
     kind = str(report.get("kind") or report.get("type") or "REPORT")
 
     verdict = str(report.get("verdict") or _get(report, "action", "recommendation") or "ALLOW").upper()
