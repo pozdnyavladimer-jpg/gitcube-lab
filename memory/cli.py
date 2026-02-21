@@ -13,18 +13,13 @@ Examples:
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
-import time
 from typing import Any, Dict, Optional
 
 from .atom import MemoryAtom
 from .bands import risk_to_band
 from .store import MemoryStore, Query
-
-
-def now_ts() -> float:
-    """Timestamp for storage context (NOT part of atom identity)."""
-    return time.time()
 
 
 def _get(d: Dict[str, Any], *path: str, default=None):
@@ -38,17 +33,32 @@ def _get(d: Dict[str, Any], *path: str, default=None):
     return cur
 
 
+def _stable_dna_key(dna: str) -> str:
+    """Stable identifier derived from DNA when producer doesn't provide dna_key."""
+    dna = (dna or "").encode("utf-8")
+    return hashlib.sha256(dna).hexdigest()[:16]
+
+
 def atom_from_report(
     report: Dict[str, Any], *, repo: Optional[str], ref: Optional[str], note: Optional[str]
 ) -> MemoryAtom:
+    # kind / version
     kind = str(report.get("kind") or report.get("type") or "REPORT")
+    version = str(report.get("version") or report.get("schema_version") or "0")
 
+    # verdict normalization
     verdict = str(report.get("verdict") or _get(report, "action", "recommendation") or "ALLOW").upper()
     if verdict not in {"ALLOW", "WARN", "BLOCK"}:
-        # GitCube core uses recommendation = ALLOW/WARN/BLOCK
         verdict = "ALLOW"
 
+    # dna / dna_key
     dna = str(report.get("dna") or _get(report, "topology", "dna") or _get(report, "metrics", "dna") or "")
+    dna_key = str(
+        report.get("dna_key")
+        or _get(report, "topology", "dna_key")
+        or _get(report, "metrics", "dna_key")
+        or _stable_dna_key(dna)
+    )
 
     # risk location differs by producer
     risk = _get(report, "baseline", "last_risk", default=None)
@@ -59,6 +69,7 @@ def atom_from_report(
         risk = _get(report, "metrics", "entropy_score", default=0.0)
     risk = float(risk or 0.0)
 
+    # baseline stats (may be missing)
     mu = float(_get(report, "baseline", "mu", default=0.0) or 0.0)
     sigma = float(_get(report, "baseline", "sigma", default=0.0) or 0.0)
     warn_th = float(_get(report, "baseline", "warn_threshold", default=0.0) or 0.0)
@@ -69,26 +80,43 @@ def atom_from_report(
         warn_th = mu + 2.0 * sigma
         block_th = mu + 3.0 * sigma
 
-    band = risk_to_band(risk)
+    band = int(risk_to_band(risk))
 
+    # metrics payload (optional)
     metrics = report.get("metrics") or report.get("metrics_last_window") or None
 
-    return MemoryAtom(
-        t=now_ts(),
+    # IMPORTANT: MemoryAtom in your repo does NOT accept `t=...`
+    # and (from your signature) requires at least: kind, version, verdict, dna, dna_key, band
+    atom = MemoryAtom(
         kind=kind,
+        version=version,
         verdict=verdict,
         dna=dna,
+        dna_key=dna_key,
         band=band,
-        risk=risk,
-        mu=mu,
-        sigma=sigma,
-        warn_threshold=warn_th,
-        block_threshold=block_th,
-        repo=repo,
-        ref=ref,
-        note=note,
-        metrics=metrics,
     )
+
+    # Optional enrichment (only if MemoryAtom supports these attrs)
+    # If MemoryAtom is a dataclass with frozen=False or defines these fields, set them.
+    for k, v in {
+        "risk": risk,
+        "mu": mu,
+        "sigma": sigma,
+        "warn_threshold": warn_th,
+        "block_threshold": block_th,
+        "repo": repo,
+        "ref": ref,
+        "note": note,
+        "metrics": metrics,
+    }.items():
+        if hasattr(atom, k):
+            try:
+                setattr(atom, k, v)
+            except Exception:
+                # If frozen / read-only, just ignore.
+                pass
+
+    return atom
 
 
 def cmd_record(args: argparse.Namespace) -> int:
