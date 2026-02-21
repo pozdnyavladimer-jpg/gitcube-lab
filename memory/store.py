@@ -14,7 +14,7 @@ from __future__ import annotations
 import json
 import os
 from dataclasses import dataclass
-from typing import Any, Dict, Iterable, Iterator, List, Optional
+from typing import Any, Dict, Iterator, List, Optional
 
 from .atom import MemoryAtom
 
@@ -53,20 +53,36 @@ class MemoryStore:
                     continue
 
     def query(self, q: Query) -> List[Dict[str, Any]]:
-        out: List[Dict[str, Any]] = []
+        """
+        Returns most recent matches (tail-first logic) because JSONL is append-only.
+        This makes feedback loops behave like a living controller.
+        """
+        matches: List[Dict[str, Any]] = []
+
         for a in self.iter_atoms():
             if q.kind and a.get("kind") != q.kind:
                 continue
             if q.verdict and a.get("verdict") != q.verdict:
                 continue
-            band = int(a.get("band", 0) or 0)
+
+            band_raw = a.get("band", 0)
+            try:
+                band = int(band_raw or 0)
+            except Exception:
+                band = 0
+
             if q.band_min is not None and band < q.band_min:
                 continue
             if q.band_max is not None and band > q.band_max:
                 continue
             if q.dna_contains and q.dna_contains not in (a.get("dna") or ""):
                 continue
-            out.append(a)
-            if len(out) >= max(1, int(q.limit)):
-                break
-        return out
+
+            matches.append(a)
+
+        # keep only most recent N
+        lim = max(1, int(q.limit))
+        if len(matches) > lim:
+            matches = matches[-lim:]
+
+        return matches
