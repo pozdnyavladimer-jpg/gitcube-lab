@@ -1,0 +1,29 @@
+{
+  "kind": "HFS_NAVIGATOR_REPORT",
+  "version": "0.1",
+  "verdict": "BLOCK",
+  "dna": "DNA: T2 R1 P1 S1 C0 F0 W0 M1",
+  "metrics_last_window": {
+    "T_topic_drift": 0.6,
+    "R_rewrite": 0.3055555555555556,
+    "P_pressure_spike": 0.16716901009456622,
+    "S_stability": 0.21999999999999997,
+    "C_contradiction": 0.0,
+    "F_focus": 0.08,
+    "risk": 0.3678226909078021
+  },
+  "baseline": {
+    "mu": 0.2053354232067362,
+    "sigma": 0.04839774955595731,
+    "warn_threshold": 0.3021309223186508,
+    "block_threshold": 0.3505286718746081,
+    "last_risk": 0.3678226909078021
+  },
+  "recommendation": "Stop. Reduce drift: pick 1 goal, write 3 steps, then continue.",
+  "meta": {
+    "seed": 99,
+    "events": 267,
+    "windows": 14,
+    "window_size": 20
+  }
+}
