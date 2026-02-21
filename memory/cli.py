@@ -3,13 +3,14 @@
 CLI for Topological Memory.
 
 Commands:
-- record: convert a GitCube/HFS JSON report into a MemoryAtom and upsert (merge) into JSONL
+- record: convert a JSON report into a MemoryAtom and upsert into JSONL
 - query : search the JSONL store
 - stats : quick store stats
 
 Examples:
   python -m memory.cli record --report report.json --store memory/memory.jsonl --repo my/repo --ref PR#12
   python -m memory.cli query --store memory/memory.jsonl --verdict WARN --limit 10
+  python -m memory.cli stats --store memory/memory.jsonl
 """
 
 from __future__ import annotations
@@ -69,7 +70,7 @@ def build_parser() -> argparse.ArgumentParser:
     sub = ap.add_subparsers(dest="cmd", required=True)
 
     r = sub.add_parser("record", help="Record a JSON report as a Memory Atom (merge/upsert)")
-    r.add_argument("--report", required=True, help="Path to GitCube/HFS JSON report")
+    r.add_argument("--report", required=True, help="Path to JSON report")
     r.add_argument("--store", default="memory/memory.jsonl", help="JSONL store path")
     r.add_argument("--repo", default=None, help="Repo identifier (optional)")
     r.add_argument("--ref", default=None, help="Commit/PR/session reference (optional)")
