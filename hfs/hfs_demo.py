@@ -1,11 +1,13 @@
 # -*- coding: utf-8 -*-
 """
-HFS Demo (Human Function Stream) — v0.2 (Wave-aware)
+HFS Demo (Human Function Stream) — v0.3 (Wave-aware + Flower-ready)
 
 Adds:
 - Spectral entropy (wave instability)
-- CUSUM early drift detection
+- CUSUM drift score (not only boolean)
 - Hybrid regulator preserved (μ+2σ / μ+3σ)
+- metrics_prev_window (for clean deltas)
+- flower_cycle: last 6 windows points (risk/specH) for petal area
 
 License: AGPL-3.0
 Author: Володимир Поздняк
@@ -73,20 +75,25 @@ def spectral_entropy(xs: List[float]) -> float:
     return clamp(h / h_max, 0.0, 1.0)
 
 
-def cusum_alarm(xs: List[float], k: float = 0.02, h: float = 0.15) -> bool:
+def cusum_score(xs: List[float], k: float = 0.02) -> float:
     """
-    Simple one-sided CUSUM drift detector.
+    One-sided CUSUM score (non-negative).
+    Returns the final accumulated score.
     """
     if len(xs) < 10:
-        return False
-
+        return 0.0
     mu = sum(xs[:-1]) / max(1, len(xs) - 1)
     s = 0.0
     for x in xs:
         s = max(0.0, s + (x - mu - k))
-        if s > h:
-            return True
-    return False
+    return float(s)
+
+
+def cusum_alarm(xs: List[float], k: float = 0.02, h: float = 0.15) -> bool:
+    """
+    Boolean alarm using CUSUM.
+    """
+    return cusum_score(xs, k=k) > float(h)
 
 
 # ---------------------------
@@ -146,11 +153,12 @@ class WindowMetrics:
     S: float
     risk: float
     spectral_entropy: float
+    cusum: float  # drift score
 
 
 def compute_windows(events: List[HFSEvent], window: int = 20) -> Tuple[List[WindowMetrics], List[float]]:
-    windows = []
-    risk_series = []
+    windows: List[WindowMetrics] = []
+    risk_series: List[float] = []
 
     for w0 in range(0, len(events), window):
         chunk = events[w0:w0 + window]
@@ -159,7 +167,6 @@ def compute_windows(events: List[HFSEvent], window: int = 20) -> Tuple[List[Wind
 
         topics = [e.topic for e in chunk]
         edits = sum(e.edits for e in chunk)
-        pauses = [e.pause for e in chunk]
         structs = [e.structure for e in chunk]
 
         topic_switches = sum(1 for a, b in zip(topics, topics[1:]) if a != b)
@@ -167,18 +174,17 @@ def compute_windows(events: List[HFSEvent], window: int = 20) -> Tuple[List[Wind
         R = clamp(edits / max(1, len(chunk) * 6), 0.0, 1.0)
         S = clamp(sum(structs) / max(1, len(structs)), 0.0, 1.0)
 
-        base_risk = clamp(
-            0.4 * T + 0.3 * R + 0.3 * (1.0 - S),
-            0.0, 1.0
-        )
-
+        base_risk = clamp(0.4 * T + 0.3 * R + 0.3 * (1.0 - S), 0.0, 1.0)
         risk_series.append(base_risk)
 
         # Wave modifier
         specH = spectral_entropy(risk_series[-32:])
         risk = clamp(base_risk + 0.15 * specH, 0.0, 1.0)
 
-        windows.append(WindowMetrics(T, R, S, risk, specH))
+        # Drift score (from base series)
+        cscore = cusum_score(risk_series)
+
+        windows.append(WindowMetrics(T, R, S, risk, specH, cscore))
 
     return windows, risk_series
 
@@ -206,7 +212,6 @@ def navigator(windows: List[WindowMetrics], risk_series: List[float]) -> Dict[st
     elif last > warn:
         verdict = "WARN"
 
-    # Early drift detection (can only escalate to WARN)
     drift = cusum_alarm(risk_series)
     if drift and verdict == "ALLOW":
         verdict = "WARN"
@@ -218,8 +223,18 @@ def navigator(windows: List[WindowMetrics], risk_series: List[float]) -> Dict[st
         "warn_threshold": warn,
         "block_threshold": block,
         "last_risk": last,
-        "cusum_drift": drift
+        "cusum_drift": drift,
+        "cusum": float(cusum_score(risk_series)),
     }
+
+
+def make_flower_cycle(windows: List[WindowMetrics], take: int = 6) -> List[Dict[str, float]]:
+    """
+    Flower cycle = last N points in (risk, specH) plane.
+    This is the real data for "petal area" computation.
+    """
+    tail = windows[-take:] if len(windows) >= take else list(windows)
+    return [{"risk": float(w.risk), "specH": float(w.spectral_entropy)} for w in tail]
 
 
 # ---------------------------
@@ -238,12 +253,15 @@ def main():
     nav = navigator(windows, risk_series)
 
     last = windows[-1] if windows else None
+    prev = windows[-2] if len(windows) >= 2 else None
 
     report = {
         "kind": "HFS_NAVIGATOR_REPORT",
-        "version": "0.2-wave",
+        "version": "0.3-wave",
         "verdict": nav["verdict"],
         "metrics_last_window": asdict(last) if last else {},
+        "metrics_prev_window": asdict(prev) if prev else {},
+        "flower_cycle": make_flower_cycle(windows, take=6),
         "baseline": nav,
         "meta": {
             "events": len(events),
