@@ -3,7 +3,7 @@
 CLI for Topological Memory.
 
 Commands:
-- record: convert a JSON report into a MemoryAtom and upsert into JSONL
+- record: convert a JSON report into a MemoryAtom and upsert into JSONL (merge by crystal_key)
 - query : search the JSONL store
 - stats : quick store stats
 """
@@ -30,11 +30,7 @@ def cmd_record(args: argparse.Namespace) -> int:
         cusum_gate=args.cusum_gate,
     )
 
-    stored = MemoryStore(args.store).upsert(
-        atom,
-        flower_gate=args.flower_gate,
-        flower_bonus=args.flower_bonus,
-    )
+    stored = MemoryStore(args.store).upsert(atom)
 
     if not args.quiet:
         print(json.dumps(stored.to_dict(), ensure_ascii=False, indent=2))
@@ -49,6 +45,7 @@ def cmd_query(args: argparse.Namespace) -> int:
         phase_state=args.phase_state,
         dna_contains=args.contains,
         dna_key=args.dna_key,
+        crystal_key=args.crystal_key,
         kind=args.kind,
         min_strength=args.min_strength,
         limit=args.limit,
@@ -76,11 +73,6 @@ def build_parser() -> argparse.ArgumentParser:
     r.add_argument("--note", default=None, help="Short note (optional)")
     r.add_argument("--key-len", type=int, default=3, help="How many DNA tokens to use for dna_key")
     r.add_argument("--cusum-gate", type=float, default=0.05, help="Shadow dominance gate for Δcusum")
-
-    # flower knobs (optional)
-    r.add_argument("--flower-gate", type=float, default=0.01, help="Petal area gate for bonus strength")
-    r.add_argument("--flower-bonus", type=int, default=1, help="Bonus strength if petal_area>=gate")
-
     r.add_argument("--quiet", action="store_true")
     r.set_defaults(func=cmd_record)
 
@@ -91,6 +83,7 @@ def build_parser() -> argparse.ArgumentParser:
     q.add_argument("--band-max", type=int, default=None)
     q.add_argument("--phase-state", type=int, default=None, help="1..42 exact phase_state filter")
     q.add_argument("--dna-key", default=None, help="Exact dna_key match")
+    q.add_argument("--crystal-key", default=None, help="Exact crystal_key match")
     q.add_argument("--contains", default=None, help="Substring match inside DNA")
     q.add_argument("--kind", default=None, help="Filter by report kind")
     q.add_argument("--min-strength", type=int, default=None, help="Only atoms with strength >= N")
