@@ -1,15 +1,10 @@
 # -*- coding: utf-8 -*-
 """
-Memory Atom (Topological Memory) — v0.3 (stable + flower optional)
-- Deterministic atom_id (no timestamps / repo / ref included in hash)
+Memory Atom (Topological Memory) — v0.4 (crystal_key + flower)
+- atom_id: snapshot id (can be unique per moment)
+- crystal_key: stable merge key = kind + dna_key
 - 42 phase states: 7 bands × 6 phase directions
-- strength + last_seen for crystallization (merge/upsert in store)
-- Optional "flower" invariant:
-    report["flower_cycle"] = [{"risk":..,"specH":..}, ...] (6 points)
-    -> flower.petal_area computed and stored in atom
-- Works for both DNA alphabets:
-  - Structural DNA: C L D S H E P M
-  - HFS DNA:        T R P S C F W M
+- flower invariant: petal_area from report["flower_cycle"] if present
 """
 
 from __future__ import annotations
@@ -20,7 +15,7 @@ import time
 from dataclasses import dataclass
 from typing import Any, Dict, Optional, Tuple
 
-from .flower import flower_from_cycle
+from .flower import extract_flower
 
 
 # -------------------------------------------------------------------
@@ -35,7 +30,6 @@ def normalize_dna_key(dna: str, key_len: int = 3) -> str:
     s = (dna or "").strip()
     if not s:
         return ""
-
     if s.lower().startswith("dna:"):
         s = s.split(":", 1)[1].strip()
 
@@ -91,12 +85,7 @@ def _get_metric(metrics: Dict[str, Any], *names: str, default: float = 0.0) -> f
 # Phase logic
 # -------------------------------------------------------------------
 
-def infer_phase_dir(
-    report: Dict[str, Any],
-    *,
-    cusum_gate: float = 0.05,
-) -> Tuple[int, Dict[str, float]]:
-
+def infer_phase_dir(report: Dict[str, Any], *, cusum_gate: float = 0.05) -> Tuple[int, Dict[str, float]]:
     baseline = report.get("baseline") if isinstance(report.get("baseline"), dict) else {}
     metrics = _pick_metrics(report)
     prev = _pick_prev_metrics(report)
@@ -107,7 +96,7 @@ def infer_phase_dir(
 
     if prev:
         prev_risk = _get_metric(prev, "risk", default=risk)
-        prev_specH = _get_metric(prev, "spectral_entropy", "specH", default=specH)
+        prev_specH = _get_metric(prev, "spectral_entropy", default=specH)
         prev_cusum = _get_metric(prev, "cusum", default=cusum)
         d_risk = risk - prev_risk
         d_specH = specH - prev_specH
@@ -119,6 +108,7 @@ def infer_phase_dir(
         d_specH = specH - _num(baseline.get("specH"), 0.5)
         d_cusum = cusum - _num(baseline.get("cusum"), 0.0)
 
+    # CUSUM dominance gate
     if abs(d_cusum) >= float(cusum_gate):
         phase_dir = 2 if d_cusum > 0 else 3
     else:
@@ -131,17 +121,19 @@ def infer_phase_dir(
         else:
             phase_dir = 5
 
-    return int(phase_dir), {
-        "d_risk": float(d_risk),
-        "d_specH": float(d_specH),
-        "d_cusum": float(d_cusum),
-    }
+    return int(phase_dir), {"d_risk": float(d_risk), "d_specH": float(d_specH), "d_cusum": float(d_cusum)}
 
 
 def phase_state_from(band: int, phase_dir: int) -> int:
     b = max(1, min(7, int(band)))
     d = max(0, min(5, int(phase_dir)))
     return (b - 1) * 6 + d + 1
+
+
+def crystal_key_from(kind: str, dna_key: str) -> str:
+    k = (kind or "").strip()
+    dk = (dna_key or "").strip()
+    return f"{k}::{dk}" if dk else f"{k}::(no_dna)"
 
 
 # -------------------------------------------------------------------
@@ -164,7 +156,6 @@ class MemoryAtom:
     baseline: Dict[str, Any]
     metrics: Dict[str, Any]
 
-    # Optional flower invariant (not part of atom_id)
     flower: Dict[str, Any]
 
     strength: int
@@ -174,6 +165,7 @@ class MemoryAtom:
     context: Dict[str, Any]
 
     atom_id: str
+    crystal_key: str
 
     # ---------------------------------------------------------------
 
@@ -188,8 +180,13 @@ class MemoryAtom:
         phase_state: int,
         baseline: Dict[str, Any],
         metrics: Dict[str, Any],
+        flower: Dict[str, Any],
     ) -> str:
-
+        """
+        atom_id = snapshot id.
+        We intentionally include phase_state + some baseline/metrics + flower area
+        so different moments can become different atom_id.
+        """
         bl = {
             "mu": baseline.get("mu"),
             "sigma": baseline.get("sigma"),
@@ -201,19 +198,22 @@ class MemoryAtom:
             "risk": metrics.get("risk", metrics.get("last_risk")),
             "specH": metrics.get("specH", metrics.get("spectral_entropy")),
             "cusum": metrics.get("cusum", baseline.get("cusum", 0.0)),
+            "deltas": metrics.get("deltas", {}),
         }
+
+        fl = {"petal_area": (flower or {}).get("petal_area", 0.0)}
 
         payload = {
             "kind": kind,
             "version": version,
-            "verdict": (verdict or "").upper(),
+            "verdict": verdict,
             "dna_key": dna_key,
             "band": int(band),
             "phase_state": int(phase_state),
             "baseline": bl,
             "metrics": mt,
+            "flower": fl,
         }
-
         return hashlib.sha256(_canon(payload).encode("utf-8")).hexdigest()
 
     # ---------------------------------------------------------------
@@ -231,7 +231,7 @@ class MemoryAtom:
     ) -> "MemoryAtom":
 
         kind = str(report.get("kind") or report.get("type") or "NAVIGATOR_REPORT")
-        version = str(report.get("version") or "0.3")
+        version = str(report.get("version") or "0.4")
 
         verdict = str(report.get("verdict") or "ALLOW").upper()
         dna = str(report.get("dna") or "")
@@ -240,7 +240,6 @@ class MemoryAtom:
         baseline = report.get("baseline") if isinstance(report.get("baseline"), dict) else {}
         metrics = _pick_metrics(report)
 
-        # phase
         phase_dir, deltas = infer_phase_dir(report, cusum_gate=cusum_gate)
         metrics.setdefault("deltas", deltas)
 
@@ -249,12 +248,8 @@ class MemoryAtom:
 
         phase_state = phase_state_from(band, phase_dir)
 
-        # flower (optional)
-        flower: Dict[str, Any] = {}
-        if isinstance(report.get("flower_cycle"), list):
-            flower = flower_from_cycle(report["flower_cycle"], x_key="risk", y_key="specH", take=6)
-        else:
-            flower = {"petal_area": 0.0, "points": []}
+        # Flower invariant
+        flower = extract_flower(report)
 
         now = time.time()
 
@@ -267,7 +262,10 @@ class MemoryAtom:
             phase_state=phase_state,
             baseline=baseline,
             metrics=metrics,
+            flower=flower,
         )
+
+        crystal_key = crystal_key_from(kind, dna_key)
 
         context: Dict[str, Any] = {}
         if repo:
@@ -294,12 +292,12 @@ class MemoryAtom:
             last_seen=now,
             context=context,
             atom_id=atom_id,
+            crystal_key=crystal_key,
         )
 
     # ---------------------------------------------------------------
 
     def to_dict(self) -> Dict[str, Any]:
-        # frozen dataclass -> __dict__ ok
         return self.__dict__
 
     # ---------------------------------------------------------------
@@ -308,36 +306,51 @@ class MemoryAtom:
     def from_dict(cls, d: Dict[str, Any]) -> "MemoryAtom":
         now = time.time()
 
+        kind = d.get("kind", "NAVIGATOR_REPORT")
+        version = d.get("version", "0.4")
+        verdict = d.get("verdict", "ALLOW")
+        dna_key = d.get("dna_key", "")
+        band = int(d.get("band", 6))
+        phase_state = int(d.get("phase_state", 1))
+
+        baseline = d.get("baseline", {}) if isinstance(d.get("baseline", {}), dict) else {}
+        metrics = d.get("metrics", {}) if isinstance(d.get("metrics", {}), dict) else {}
+        flower = d.get("flower", {}) if isinstance(d.get("flower", {}), dict) else {}
+
         atom_id = str(d.get("atom_id", "")).strip()
         if not atom_id:
             atom_id = cls.compute_atom_id(
-                kind=d.get("kind", "NAVIGATOR_REPORT"),
-                version=d.get("version", "0.3"),
-                verdict=str(d.get("verdict", "ALLOW")).upper(),
-                dna_key=d.get("dna_key", ""),
-                band=d.get("band", 6),
-                phase_state=d.get("phase_state", 1),
-                baseline=d.get("baseline", {}),
-                metrics=d.get("metrics", {}),
+                kind=kind,
+                version=version,
+                verdict=verdict,
+                dna_key=dna_key,
+                band=band,
+                phase_state=phase_state,
+                baseline=baseline,
+                metrics=metrics,
+                flower=flower,
             )
 
-        flower = d.get("flower") if isinstance(d.get("flower"), dict) else {"petal_area": 0.0, "points": []}
+        crystal_key = str(d.get("crystal_key", "")).strip()
+        if not crystal_key:
+            crystal_key = crystal_key_from(kind, dna_key)
 
         return cls(
-            kind=d.get("kind", "NAVIGATOR_REPORT"),
-            version=d.get("version", "0.3"),
-            verdict=str(d.get("verdict", "ALLOW")).upper(),
+            kind=kind,
+            version=version,
+            verdict=verdict,
             dna=d.get("dna", ""),
-            dna_key=d.get("dna_key", ""),
-            band=int(d.get("band", 6)),
+            dna_key=dna_key,
+            band=band,
             phase_dir=int(d.get("phase_dir", 5)),
-            phase_state=int(d.get("phase_state", 1)),
-            baseline=d.get("baseline", {}) if isinstance(d.get("baseline"), dict) else {},
-            metrics=d.get("metrics", {}) if isinstance(d.get("metrics"), dict) else {},
+            phase_state=phase_state,
+            baseline=baseline,
+            metrics=metrics,
             flower=flower,
             strength=int(d.get("strength", 1)),
             first_seen=float(d.get("first_seen", now)),
             last_seen=float(d.get("last_seen", now)),
-            context=d.get("context", {}) if isinstance(d.get("context"), dict) else {},
+            context=d.get("context", {}) if isinstance(d.get("context", {}), dict) else {},
             atom_id=atom_id,
+            crystal_key=crystal_key,
         )
