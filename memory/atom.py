@@ -1,9 +1,16 @@
 # -*- coding: utf-8 -*-
 """
-Memory Atom (Topological Memory) — v0.3 (stable)
-- Deterministic atom_id (snapshot id)
+Memory Atom (Topological Memory) — v0.4 (flower-aware)
+
+Adds:
+- flower_cycle -> petal_area (Shoelace)
+- crystal_key = kind + ":" + dna_key  (core key for crystallization)
+- Backward-compatible loading from older JSONL (no crystal_key/flower)
+
+Keeps:
+- Deterministic atom_id (no timestamps / repo / ref included in hash)
 - 42 phase states: 7 bands × 6 phase directions
-- crystal_key = stable identity for merge (knowledge seed)
+- strength + first_seen/last_seen
 """
 
 from __future__ import annotations
@@ -12,11 +19,30 @@ import hashlib
 import json
 import time
 from dataclasses import dataclass
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, Optional, Tuple, List
 
+
+# -------------------------------------------------------------------
+# Helpers
+# -------------------------------------------------------------------
 
 def _canon(obj: Any) -> str:
     return json.dumps(obj, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+
+
+def _num(x: Any, default: float = 0.0) -> float:
+    try:
+        return float(x) if x is not None else default
+    except Exception:
+        return default
+
+
+def _q(x: Any, ndigits: int = 6) -> float:
+    """Quantize floats to reduce atom_id explosion (still deterministic)."""
+    try:
+        return round(float(x), ndigits)
+    except Exception:
+        return 0.0
 
 
 def normalize_dna_key(dna: str, key_len: int = 3) -> str:
@@ -27,7 +53,7 @@ def normalize_dna_key(dna: str, key_len: int = 3) -> str:
     if s.lower().startswith("dna:"):
         s = s.split(":", 1)[1].strip()
 
-    toks = []
+    toks: List[str] = []
     for t in s.replace(",", " ").split():
         if len(t) >= 2 and t[0].isalpha() and t[-1].isdigit():
             toks.append(t)
@@ -43,13 +69,6 @@ def _band_from_verdict(verdict: str) -> int:
     if v == "WARN":
         return 3
     return 6
-
-
-def _num(x: Any, default: float = 0.0) -> float:
-    try:
-        return float(x) if x is not None else default
-    except Exception:
-        return default
 
 
 def _pick_metrics(report: Dict[str, Any]) -> Dict[str, Any]:
@@ -74,6 +93,65 @@ def _get_metric(metrics: Dict[str, Any], *names: str, default: float = 0.0) -> f
             return _num(metrics.get(n), default)
     return default
 
+
+# -------------------------------------------------------------------
+# Flower math (Shoelace)
+# -------------------------------------------------------------------
+
+def polygon_area(points: List[Tuple[float, float]]) -> float:
+    """
+    Shoelace formula. points: list[(x,y)] with at least 3 points.
+    Returns absolute area.
+    """
+    if not points or len(points) < 3:
+        return 0.0
+    s = 0.0
+    n = len(points)
+    for i in range(n):
+        x1, y1 = points[i]
+        x2, y2 = points[(i + 1) % n]
+        s += x1 * y2 - x2 * y1
+    return abs(s) * 0.5
+
+
+def extract_flower(report: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Accepts either:
+      - report["flower_cycle"] = [{"risk":..,"specH":..}, ...]
+      - or report["flower"]["points"] = [[x,y],...]
+    Produces:
+      {"petal_area": float, "points": [[x,y],...]}
+    """
+    points: List[Tuple[float, float]] = []
+
+    cycle = report.get("flower_cycle")
+    if isinstance(cycle, list) and cycle:
+        for p in cycle:
+            if isinstance(p, dict):
+                x = _num(p.get("risk"), 0.0)
+                y = _num(p.get("specH"), 0.0)
+                points.append((x, y))
+
+    if not points:
+        flower = report.get("flower")
+        if isinstance(flower, dict):
+            pts = flower.get("points")
+            if isinstance(pts, list) and pts:
+                for xy in pts:
+                    if isinstance(xy, (list, tuple)) and len(xy) >= 2:
+                        points.append((_num(xy[0], 0.0), _num(xy[1], 0.0)))
+
+    area = polygon_area(points) if len(points) >= 3 else 0.0
+
+    return {
+        "petal_area": float(area),
+        "points": [[float(x), float(y)] for (x, y) in points],
+    }
+
+
+# -------------------------------------------------------------------
+# Phase logic
+# -------------------------------------------------------------------
 
 def infer_phase_dir(
     report: Dict[str, Any],
@@ -128,6 +206,10 @@ def phase_state_from(band: int, phase_dir: int) -> int:
     return (b - 1) * 6 + d + 1
 
 
+# -------------------------------------------------------------------
+# Memory Atom
+# -------------------------------------------------------------------
+
 @dataclass(frozen=True)
 class MemoryAtom:
     kind: str
@@ -144,9 +226,11 @@ class MemoryAtom:
     baseline: Dict[str, Any]
     metrics: Dict[str, Any]
 
-    # NEW:
-    crystal_key: str          # stable identity (merge key)
-    last_atom_id: str         # provenance (snapshot id)
+    # flower invariant (petal area)
+    flower: Dict[str, Any]
+
+    # crystallization key (core)
+    crystal_key: str
 
     strength: int
     first_seen: float
@@ -155,6 +239,16 @@ class MemoryAtom:
     context: Dict[str, Any]
 
     atom_id: str
+
+    # ---------------------------------------------------------------
+
+    @staticmethod
+    def compute_crystal_key(kind: str, dna_key: str) -> str:
+        k = str(kind or "").strip() or "NAVIGATOR_REPORT"
+        d = str(dna_key or "").strip()
+        return f"{k}:{d}" if d else k
+
+    # ---------------------------------------------------------------
 
     @staticmethod
     def compute_atom_id(
@@ -167,33 +261,40 @@ class MemoryAtom:
         phase_state: int,
         baseline: Dict[str, Any],
         metrics: Dict[str, Any],
+        flower: Dict[str, Any],
     ) -> str:
-
         bl = {
-            "mu": baseline.get("mu"),
-            "sigma": baseline.get("sigma"),
-            "warn_threshold": baseline.get("warn_threshold"),
-            "block_threshold": baseline.get("block_threshold"),
+            "mu": _q(baseline.get("mu"), 6),
+            "sigma": _q(baseline.get("sigma"), 6),
+            "warn_threshold": _q(baseline.get("warn_threshold"), 6),
+            "block_threshold": _q(baseline.get("block_threshold"), 6),
         }
 
         mt = {
-            "risk": metrics.get("risk", metrics.get("last_risk")),
-            "specH": metrics.get("specH", metrics.get("spectral_entropy")),
-            "cusum": metrics.get("cusum", baseline.get("cusum", 0.0)),
+            "risk": _q(metrics.get("risk", metrics.get("last_risk")), 6),
+            "specH": _q(metrics.get("specH", metrics.get("spectral_entropy")), 6),
+            "cusum": _q(metrics.get("cusum", baseline.get("cusum", 0.0)), 6),
+        }
+
+        fl = {
+            "petal_area": _q((flower or {}).get("petal_area", 0.0), 9),
         }
 
         payload = {
-            "kind": kind,
-            "version": version,
-            "verdict": verdict,
-            "dna_key": dna_key,
+            "kind": str(kind),
+            "version": str(version),
+            "verdict": str(verdict),
+            "dna_key": str(dna_key),
             "band": int(band),
             "phase_state": int(phase_state),
             "baseline": bl,
             "metrics": mt,
+            "flower": fl,
         }
 
         return hashlib.sha256(_canon(payload).encode("utf-8")).hexdigest()
+
+    # ---------------------------------------------------------------
 
     @classmethod
     def from_report(
@@ -208,7 +309,7 @@ class MemoryAtom:
     ) -> "MemoryAtom":
 
         kind = str(report.get("kind") or report.get("type") or "NAVIGATOR_REPORT")
-        version = str(report.get("version") or "0.3")
+        version = str(report.get("version") or "0.4")
 
         verdict = str(report.get("verdict") or "ALLOW").upper()
         dna = str(report.get("dna") or "")
@@ -225,7 +326,12 @@ class MemoryAtom:
 
         phase_state = phase_state_from(band, phase_dir)
 
+        # flower invariant from report (uses flower_cycle points)
+        flower = extract_flower(report)
+
         now = time.time()
+
+        crystal_key = cls.compute_crystal_key(kind, dna_key)
 
         atom_id = cls.compute_atom_id(
             kind=kind,
@@ -236,10 +342,8 @@ class MemoryAtom:
             phase_state=phase_state,
             baseline=baseline,
             metrics=metrics,
+            flower=flower,
         )
-
-        # NEW: stable merge key
-        crystal_key = f"{kind}::{dna_key}" if dna_key else f"{kind}::"
 
         context: Dict[str, Any] = {}
         if repo:
@@ -260,8 +364,8 @@ class MemoryAtom:
             phase_state=phase_state,
             baseline=baseline,
             metrics=metrics,
+            flower=flower,
             crystal_key=crystal_key,
-            last_atom_id=atom_id,
             strength=1,
             first_seen=now,
             last_seen=now,
@@ -269,48 +373,66 @@ class MemoryAtom:
             atom_id=atom_id,
         )
 
+    # ---------------------------------------------------------------
+
     def to_dict(self) -> Dict[str, Any]:
         return self.__dict__
+
+    # ---------------------------------------------------------------
 
     @classmethod
     def from_dict(cls, d: Dict[str, Any]) -> "MemoryAtom":
         now = time.time()
 
+        kind = str(d.get("kind", "NAVIGATOR_REPORT"))
+        version = str(d.get("version", "0.4"))
+        verdict = str(d.get("verdict", "ALLOW")).upper()
+        dna = str(d.get("dna", ""))
+        dna_key = str(d.get("dna_key", ""))
+
+        baseline = d.get("baseline") if isinstance(d.get("baseline"), dict) else {}
+        metrics = d.get("metrics") if isinstance(d.get("metrics"), dict) else {}
+
+        flower = d.get("flower") if isinstance(d.get("flower"), dict) else {"petal_area": 0.0, "points": []}
+        if "petal_area" not in flower:
+            flower["petal_area"] = 0.0
+        if "points" not in flower:
+            flower["points"] = []
+
+        crystal_key = str(d.get("crystal_key", "")).strip()
+        if not crystal_key:
+            crystal_key = cls.compute_crystal_key(kind, dna_key)
+
         atom_id = str(d.get("atom_id", "")).strip()
         if not atom_id:
             atom_id = cls.compute_atom_id(
-                kind=d.get("kind", "NAVIGATOR_REPORT"),
-                version=d.get("version", "0.3"),
-                verdict=d.get("verdict", "ALLOW"),
-                dna_key=d.get("dna_key", ""),
-                band=d.get("band", 6),
-                phase_state=d.get("phase_state", 1),
-                baseline=d.get("baseline", {}),
-                metrics=d.get("metrics", {}),
+                kind=kind,
+                version=version,
+                verdict=verdict,
+                dna_key=dna_key,
+                band=int(d.get("band", 6)),
+                phase_state=int(d.get("phase_state", 1)),
+                baseline=baseline,
+                metrics=metrics,
+                flower=flower,
             )
 
-        ck = str(d.get("crystal_key", "") or "")
-        if not ck:
-            dna_key = str(d.get("dna_key", "") or "")
-            kind = str(d.get("kind", "NAVIGATOR_REPORT"))
-            ck = f"{kind}::{dna_key}" if dna_key else f"{kind}::"
-
         return cls(
-            kind=d.get("kind", "NAVIGATOR_REPORT"),
-            version=d.get("version", "0.3"),
-            verdict=d.get("verdict", "ALLOW"),
-            dna=d.get("dna", ""),
-            dna_key=d.get("dna_key", ""),
+            kind=kind,
+            version=version,
+            verdict=verdict,
+            dna=dna,
+            dna_key=dna_key,
             band=int(d.get("band", 6)),
             phase_dir=int(d.get("phase_dir", 5)),
             phase_state=int(d.get("phase_state", 1)),
-            baseline=d.get("baseline", {}),
-            metrics=d.get("metrics", {}),
-            crystal_key=ck,
-            last_atom_id=str(d.get("last_atom_id", atom_id)),
+            baseline=baseline,
+            metrics=metrics,
+            flower=flower,
+            crystal_key=crystal_key,
             strength=int(d.get("strength", 1)),
             first_seen=float(d.get("first_seen", now)),
             last_seen=float(d.get("last_seen", now)),
-            context=d.get("context", {}),
+            context=d.get("context") if isinstance(d.get("context"), dict) else {},
             atom_id=atom_id,
         )
