@@ -43,14 +43,15 @@ class MemoryStore:
                 try:
                     rows.append(json.loads(line))
                 except Exception:
-                    # skip corrupted lines instead of dying
                     continue
         return rows
 
     def _write_all(self, rows: List[Dict[str, Any]]) -> None:
-        with open(self.path, "w", encoding="utf-8") as f:
+        tmp = self.path + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as f:
             for r in rows:
                 f.write(json.dumps(r, ensure_ascii=False) + "\n")
+        os.replace(tmp, self.path)
 
     # -------------------------
     # Merge / Upsert
@@ -60,13 +61,14 @@ class MemoryStore:
             f.write(json.dumps(atom.to_dict(), ensure_ascii=False) + "\n")
         return atom
 
-    def upsert(self, atom: MemoryAtom) -> MemoryAtom:
+    def upsert(self, atom: MemoryAtom, *, flower_gate: float = 0.01, flower_bonus: int = 1) -> MemoryAtom:
         """
         Merge by atom_id:
-          - strength += 1
+          - strength += 1 (+bonus if flower.petal_area >= gate)
           - last_seen = now
           - keep first_seen minimal (oldest)
           - context: keep existing, fill missing keys from new
+          - flower: keep the max petal_area (best evidence of hysteresis)
         """
         now = time.time()
         rows = self._read_all()
@@ -77,21 +79,26 @@ class MemoryStore:
                 idx = i
                 break
 
+        # compute bonus from current atom
+        a_flower = atom.flower if isinstance(atom.flower, dict) else {}
+        a_area = float(a_flower.get("petal_area", 0.0) or 0.0)
+        add = 1 + (int(flower_bonus) if a_area >= float(flower_gate) else 0)
+
         if idx is None:
-            # brand new
-            a = atom
-            # ensure timestamps exist
-            d = a.to_dict()
+            d = atom.to_dict()
             d["strength"] = int(d.get("strength", 1) or 1)
             d["first_seen"] = float(d.get("first_seen", now) or now)
             d["last_seen"] = float(d.get("last_seen", now) or now)
+            # for brand new atom, we can also apply bonus immediately
+            d["strength"] = int(d["strength"]) + (add - 1)
             rows.append(d)
             self._write_all(rows)
             return MemoryAtom.from_dict(d)
 
         # merge existing
         r = rows[idx]
-        strength = int(r.get("strength", 1) or 1) + 1
+        old_strength = int(r.get("strength", 1) or 1)
+        strength = old_strength + add
 
         first_seen = float(r.get("first_seen", now) or now)
         last_seen = now
@@ -104,12 +111,21 @@ class MemoryStore:
             if k not in merged_ctx:
                 merged_ctx[k] = v
 
-        r["strength"] = strength
-        r["first_seen"] = first_seen
-        r["last_seen"] = last_seen
-        r["context"] = merged_ctx
+        # flower merge: keep max area
+        old_flower = r.get("flower") if isinstance(r.get("flower"), dict) else {"petal_area": 0.0, "points": []}
+        old_area = float(old_flower.get("petal_area", 0.0) or 0.0)
+        if a_area >= old_area:
+            merged_flower = a_flower
+        else:
+            merged_flower = old_flower
 
-        # Optional: refresh volatile fields if you want (safe defaults: keep old)
+        r["strength"] = int(strength)
+        r["first_seen"] = float(first_seen)
+        r["last_seen"] = float(last_seen)
+        r["context"] = merged_ctx
+        r["flower"] = merged_flower
+
+        # Optional: refresh volatile snapshots if you want
         # r["metrics"] = atom.metrics
         # r["baseline"] = atom.baseline
 
@@ -144,7 +160,10 @@ class MemoryStore:
             return True
 
         out = [r for r in rows if ok(r)]
-        out.sort(key=lambda r: (int(r.get("strength", 1) or 1), float(r.get("last_seen", 0.0) or 0.0)), reverse=True)
+        out.sort(
+            key=lambda r: (int(r.get("strength", 1) or 1), float(r.get("last_seen", 0.0) or 0.0)),
+            reverse=True,
+        )
         return out[: int(q.limit or 50)]
 
     def stats(self) -> Dict[str, Any]:
