@@ -1,71 +1,64 @@
 # -*- coding: utf-8 -*-
 """
-Flower invariant utilities (Topological Memory)
-- Computes "petal area" (hysteresis) for a 6-step cycle
-- Pure math, no dependencies
+Flower invariant (6-step cycle):
+- compute petal area in (risk, specH) plane using shoelace formula
+- extract points from report["flower_cycle"] if present
 
-We use the polygon area (shoelace formula) in (risk, specH) plane.
-If the system goes 3 steps forward and 3 steps back, state may return,
-but the path can enclose non-zero area => invariant of trajectory.
+We store:
+  flower = {
+    "petal_area": float,
+    "points": [[risk, specH], ...]
+  }
 """
 
 from __future__ import annotations
-
-from typing import Iterable, List, Sequence, Tuple, Dict, Any
-
-
-Point = Tuple[float, float]
+from typing import Any, Dict, List, Tuple
 
 
-def _to_float(x: Any, default: float = 0.0) -> float:
+def _num(x: Any, default: float = 0.0) -> float:
     try:
-        return float(x)
+        return float(x) if x is not None else default
     except Exception:
         return default
 
 
-def shoelace_area(points: Sequence[Point]) -> float:
+def shoelace_area(points: List[Tuple[float, float]]) -> float:
     """
-    Area of a polygon defined by points (x,y).
-    If points are not closed, we close automatically.
-    Returns non-negative area.
+    Discrete polygon area (absolute), points expected in order.
     """
     n = len(points)
     if n < 3:
         return 0.0
-
-    area2 = 0.0
+    s = 0.0
     for i in range(n):
         x1, y1 = points[i]
         x2, y2 = points[(i + 1) % n]
-        area2 += x1 * y2 - x2 * y1
-    return abs(area2) * 0.5
+        s += x1 * y2 - x2 * y1
+    return abs(s) * 0.5
 
 
-def flower_from_cycle(
-    cycle: Iterable[Dict[str, Any]],
-    *,
-    x_key: str = "risk",
-    y_key: str = "specH",
-    take: int = 6,
-) -> Dict[str, Any]:
+def extract_flower(report: Dict[str, Any]) -> Dict[str, Any]:
     """
-    cycle: iterable of dicts with at least (risk, specH), length>=6 recommended.
-    Returns:
-      {
-        "petal_area": float,
-        "points": [(risk, specH), ...]  # up to 6
-      }
+    Read report["flower_cycle"] as list of dicts: [{"risk":..., "specH":...}, ...]
+    Returns {} if not present.
     """
-    pts: List[Point] = []
-    for item in cycle:
+    cyc = report.get("flower_cycle")
+    if not isinstance(cyc, list) or not cyc:
+        return {}
+
+    pts: List[Tuple[float, float]] = []
+    for item in cyc:
         if not isinstance(item, dict):
             continue
-        x = _to_float(item.get(x_key), 0.0)
-        y = _to_float(item.get(y_key), 0.0)
+        x = _num(item.get("risk"), 0.0)
+        y = _num(item.get("specH"), _num(item.get("spectral_entropy"), 0.0))
         pts.append((x, y))
-        if len(pts) >= take:
-            break
+
+    if len(pts) < 3:
+        return {}
 
     area = shoelace_area(pts)
-    return {"petal_area": float(area), "points": pts}
+    return {
+        "petal_area": float(area),
+        "points": [[float(x), float(y)] for x, y in pts],
+    }
