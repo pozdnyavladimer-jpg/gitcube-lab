@@ -6,11 +6,6 @@ Commands:
 - record: convert a JSON report into a MemoryAtom and upsert into JSONL
 - query : search the JSONL store
 - stats : quick store stats
-
-Examples:
-  python -m memory.cli record --report report.json --store memory/memory.jsonl --repo my/repo --ref PR#12
-  python -m memory.cli query --store memory/memory.jsonl --verdict WARN --limit 10
-  python -m memory.cli stats --store memory/memory.jsonl
 """
 
 from __future__ import annotations
@@ -35,7 +30,11 @@ def cmd_record(args: argparse.Namespace) -> int:
         cusum_gate=args.cusum_gate,
     )
 
-    stored = MemoryStore(args.store).upsert(atom)
+    stored = MemoryStore(args.store).upsert(
+        atom,
+        flower_gate=args.flower_gate,
+        flower_bonus=args.flower_bonus,
+    )
 
     if not args.quiet:
         print(json.dumps(stored.to_dict(), ensure_ascii=False, indent=2))
@@ -77,6 +76,11 @@ def build_parser() -> argparse.ArgumentParser:
     r.add_argument("--note", default=None, help="Short note (optional)")
     r.add_argument("--key-len", type=int, default=3, help="How many DNA tokens to use for dna_key")
     r.add_argument("--cusum-gate", type=float, default=0.05, help="Shadow dominance gate for Δcusum")
+
+    # flower knobs (optional)
+    r.add_argument("--flower-gate", type=float, default=0.01, help="Petal area gate for bonus strength")
+    r.add_argument("--flower-bonus", type=int, default=1, help="Bonus strength if petal_area>=gate")
+
     r.add_argument("--quiet", action="store_true")
     r.set_defaults(func=cmd_record)
 
