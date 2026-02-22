@@ -18,6 +18,7 @@ class Query:
     phase_state: Optional[int] = None
     dna_contains: Optional[str] = None
     dna_key: Optional[str] = None
+    crystal_key: Optional[str] = None
     kind: Optional[str] = None
     min_strength: Optional[int] = None
     limit: int = 50
@@ -47,87 +48,110 @@ class MemoryStore:
         return rows
 
     def _write_all(self, rows: List[Dict[str, Any]]) -> None:
-        tmp = self.path + ".tmp"
-        with open(tmp, "w", encoding="utf-8") as f:
+        with open(self.path, "w", encoding="utf-8") as f:
             for r in rows:
                 f.write(json.dumps(r, ensure_ascii=False) + "\n")
-        os.replace(tmp, self.path)
 
     # -------------------------
-    # Merge / Upsert
+    # Append / Upsert
     # -------------------------
     def append(self, atom: MemoryAtom) -> MemoryAtom:
         with open(self.path, "a", encoding="utf-8") as f:
             f.write(json.dumps(atom.to_dict(), ensure_ascii=False) + "\n")
         return atom
 
-    def upsert(self, atom: MemoryAtom, *, flower_gate: float = 0.01, flower_bonus: int = 1) -> MemoryAtom:
+    def upsert(self, atom: MemoryAtom) -> MemoryAtom:
         """
-        Merge by atom_id:
-          - strength += 1 (+bonus if flower.petal_area >= gate)
+        Merge by crystal_key (NOT atom_id):
+          - strength += 1
           - last_seen = now
           - keep first_seen minimal (oldest)
           - context: keep existing, fill missing keys from new
-          - flower: keep the max petal_area (best evidence of hysteresis)
+          - keep last snapshot atom_id
+          - accumulate flower area:
+              flower.area_sum += petal_area
+              flower.area_max = max(area_max, petal_area)
         """
         now = time.time()
         rows = self._read_all()
 
+        ck = str(getattr(atom, "crystal_key", "") or "").strip()
+        if not ck:
+            ck = f"{atom.kind}::(no_dna)"
+
         idx = None
         for i, r in enumerate(rows):
-            if str(r.get("atom_id", "")) == atom.atom_id:
+            if str(r.get("crystal_key", "")).strip() == ck:
                 idx = i
                 break
 
-        # compute bonus from current atom
-        a_flower = atom.flower if isinstance(atom.flower, dict) else {}
-        a_area = float(a_flower.get("petal_area", 0.0) or 0.0)
-        add = 1 + (int(flower_bonus) if a_area >= float(flower_gate) else 0)
+        petal_area = 0.0
+        if isinstance(atom.flower, dict):
+            try:
+                petal_area = float(atom.flower.get("petal_area", 0.0) or 0.0)
+            except Exception:
+                petal_area = 0.0
 
         if idx is None:
             d = atom.to_dict()
+            d["crystal_key"] = ck
             d["strength"] = int(d.get("strength", 1) or 1)
             d["first_seen"] = float(d.get("first_seen", now) or now)
             d["last_seen"] = float(d.get("last_seen", now) or now)
-            # for brand new atom, we can also apply bonus immediately
-            d["strength"] = int(d["strength"]) + (add - 1)
+
+            # init flower accumulators
+            fl = d.get("flower") if isinstance(d.get("flower"), dict) else {}
+            fl.setdefault("petal_area", petal_area)
+            fl["area_sum"] = float(petal_area)
+            fl["area_max"] = float(petal_area)
+            d["flower"] = fl
+
             rows.append(d)
             self._write_all(rows)
             return MemoryAtom.from_dict(d)
 
         # merge existing
         r = rows[idx]
-        old_strength = int(r.get("strength", 1) or 1)
-        strength = old_strength + add
+        r["crystal_key"] = ck
 
-        first_seen = float(r.get("first_seen", now) or now)
-        last_seen = now
+        r["strength"] = int(r.get("strength", 1) or 1) + 1
+        r["first_seen"] = float(r.get("first_seen", now) or now)
+        r["last_seen"] = now
 
-        # context merge: keep old, fill missing with new
+        # keep latest snapshot id + some fresh fields
+        r["atom_id"] = atom.atom_id
+        r["verdict"] = atom.verdict
+        r["band"] = atom.band
+        r["phase_dir"] = atom.phase_dir
+        r["phase_state"] = atom.phase_state
+        r["dna"] = atom.dna
+        r["dna_key"] = atom.dna_key
+        r["kind"] = atom.kind
+        r["version"] = atom.version
+
+        # context merge
         old_ctx = r.get("context") if isinstance(r.get("context"), dict) else {}
         new_ctx = atom.context if isinstance(atom.context, dict) else {}
         merged_ctx = dict(old_ctx)
         for k, v in new_ctx.items():
             if k not in merged_ctx:
                 merged_ctx[k] = v
-
-        # flower merge: keep max area
-        old_flower = r.get("flower") if isinstance(r.get("flower"), dict) else {"petal_area": 0.0, "points": []}
-        old_area = float(old_flower.get("petal_area", 0.0) or 0.0)
-        if a_area >= old_area:
-            merged_flower = a_flower
-        else:
-            merged_flower = old_flower
-
-        r["strength"] = int(strength)
-        r["first_seen"] = float(first_seen)
-        r["last_seen"] = float(last_seen)
         r["context"] = merged_ctx
-        r["flower"] = merged_flower
 
-        # Optional: refresh volatile snapshots if you want
-        # r["metrics"] = atom.metrics
-        # r["baseline"] = atom.baseline
+        # (optional) refresh metrics/baseline to latest snapshot
+        r["metrics"] = atom.metrics
+        r["baseline"] = atom.baseline
+
+        # flower accumulation
+        fl = r.get("flower") if isinstance(r.get("flower"), dict) else {}
+        area_sum = float(fl.get("area_sum", 0.0) or 0.0) + float(petal_area)
+        area_max = max(float(fl.get("area_max", 0.0) or 0.0), float(petal_area))
+        fl["petal_area"] = float(petal_area)
+        fl["area_sum"] = float(area_sum)
+        fl["area_max"] = float(area_max)
+        if isinstance(atom.flower, dict) and "points" in atom.flower:
+            fl["points"] = atom.flower["points"]
+        r["flower"] = fl
 
         rows[idx] = r
         self._write_all(rows)
@@ -153,6 +177,8 @@ class MemoryStore:
                 return False
             if q.dna_key and str(r.get("dna_key", "")) != str(q.dna_key):
                 return False
+            if q.crystal_key and str(r.get("crystal_key", "")) != str(q.crystal_key):
+                return False
             if q.dna_contains and str(q.dna_contains) not in str(r.get("dna", "")):
                 return False
             if q.min_strength is not None and int(r.get("strength", 1) or 1) < int(q.min_strength):
@@ -161,7 +187,11 @@ class MemoryStore:
 
         out = [r for r in rows if ok(r)]
         out.sort(
-            key=lambda r: (int(r.get("strength", 1) or 1), float(r.get("last_seen", 0.0) or 0.0)),
+            key=lambda r: (
+                int(r.get("strength", 1) or 1),
+                float((r.get("flower") or {}).get("area_sum", 0.0) or 0.0),
+                float(r.get("last_seen", 0.0) or 0.0),
+            ),
             reverse=True,
         )
         return out[: int(q.limit or 50)]
@@ -169,6 +199,20 @@ class MemoryStore:
     def stats(self) -> Dict[str, Any]:
         rows = self._read_all()
         if not rows:
-            return {"count": 0, "strength_sum": 0, "strength_max": 0}
+            return {"count": 0, "strength_sum": 0, "strength_max": 0, "flower_area_sum": 0.0, "flower_area_max": 0.0}
+
         strengths = [int(r.get("strength", 1) or 1) for r in rows]
-        return {"count": len(rows), "strength_sum": sum(strengths), "strength_max": max(strengths)}
+        area_sums = []
+        area_maxs = []
+        for r in rows:
+            fl = r.get("flower") if isinstance(r.get("flower"), dict) else {}
+            area_sums.append(float(fl.get("area_sum", 0.0) or 0.0))
+            area_maxs.append(float(fl.get("area_max", 0.0) or 0.0))
+
+        return {
+            "count": len(rows),
+            "strength_sum": sum(strengths),
+            "strength_max": max(strengths),
+            "flower_area_sum": float(sum(area_sums)),
+            "flower_area_max": float(max(area_maxs) if area_maxs else 0.0),
+        }
