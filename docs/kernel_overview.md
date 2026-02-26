@@ -54,3 +54,17 @@ This is a practical example of how a “Kernel” becomes a controller in a real
 
 ## Next step (optional)
 Add a recorder that writes CRYSTAL events into a JSONL store (memory.jsonl).
+
+
+## Memory (Topological Memory)
+
+Persistent store: `memory/memory.jsonl`
+
+- `memory/atom.py` defines `MemoryAtom` (phase_state 1..42, flower invariant, crystal_key)
+- `memory/store.py` provides JSONL store with `upsert()` merge by `crystal_key`
+- `memory/cli.py` provides `gitcube-memory record/query/stats`
+- `memory/record_crystal.py` is a bridge from simulation outputs to `memory.jsonl`
+
+### Show last entry ("джонс")
+```bash
+tail -n 1 memory/memory.jsonl
