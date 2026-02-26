@@ -290,6 +290,24 @@ Focus:
 
 ---
 
+# gitcube-lab
+
+A small research sandbox for:
+- oscillator dynamics (Kuramoto-13)
+- discrete state mapping (octaves + letters)
+- simple controllers (VR comfort kernel)
+
+## Files
+- `kuramoto13.py` — 13-node Kuramoto engine with self-controlled coupling `K(t)` and CRYSTAL event detection
+- `teleport.py` — discrete mapping from continuous state -> `O1..O7` + stable letter (a “keyboard”)
+- `apps/vr_comfort/vestibular_kernel.py` — adaptive comfort controller for VR-like motion mismatch
+- `docs/kernel_overview.md` — overview and design notes
+
+## Quick runs
+```bash
+python kuramoto13.py
+python teleport.py
+python apps/vr_comfort/demo_vr_comfort.py
 # License
 
 AGPL-3.0
