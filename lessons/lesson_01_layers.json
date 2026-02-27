@@ -1,0 +1,15 @@
+{
+  "name": "Lesson 01 - Layered Architecture",
+  "graph": {
+    "nodes": {
+      "UI": 1,
+      "Service": 2,
+      "DB": 3
+    },
+    "edges": [
+      ["UI", "Service"],
+      ["Service", "DB"],
+      ["UI", "DB"]
+    ]
+  }
+}
