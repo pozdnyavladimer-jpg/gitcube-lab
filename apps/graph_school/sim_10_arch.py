@@ -8,6 +8,15 @@ from dataclasses import dataclass
 from collections import defaultdict
 from typing import Dict, List, Tuple, Set
 
+from .policies import (
+    Policy,
+    LAYERED_3TIER,
+    INWARD_CLEAN_ONION,
+    INWARD_HEXAGONAL,
+    FLAT_MICROSERVICES,
+    EVENT_DRIVEN,
+)
+
 
 def count_cycle_nodes(nodes: List[str], edges: List[Tuple[str, str]]) -> int:
     """
@@ -31,7 +40,6 @@ def count_cycle_nodes(nodes: List[str], edges: List[Tuple[str, str]]) -> int:
                 parent[v] = u
                 dfs(v)
             elif v in stack:
-                # Back-edge: mark cycle path u -> ... -> v
                 cur = u
                 in_cycle.add(v)
                 while cur != v and cur in parent:
@@ -56,18 +64,17 @@ class EvalResult:
     layer_viol: int
     skip_viol: int
     density: float
+    policy: str
 
 
 class GraphEnv:
     """
-    Generic graph grammar evaluator with:
-    - layer diff rules (allowed diffs)
-    - hard gates (cycles / layer skips)
+    Graph evaluator that uses a Policy as grammar.
     """
 
-    def __init__(self, *, allowed_diffs: Set[int], name: str):
+    def __init__(self, *, name: str, policy: Policy):
         self.name = name
-        self.allowed_diffs = set(allowed_diffs)
+        self.policy = policy
         self.nodes: Dict[str, int] = {}
         self.edges: List[Tuple[str, str]] = []
 
@@ -83,12 +90,12 @@ class GraphEnv:
         N = len(self.nodes)
         E = len(self.edges)
 
-        # Layer violations + "skip" violations (diff magnitude >= 2)
         layer_viol = 0
         skip_viol = 0
+
         for u, v in self.edges:
             diff = self.nodes[v] - self.nodes[u]
-            if diff not in self.allowed_diffs:
+            if diff not in self.policy.allowed_diffs:
                 layer_viol += 1
                 if abs(diff) >= 2:
                     skip_viol += 1
@@ -98,33 +105,35 @@ class GraphEnv:
         density = E / (N * (N - 1)) if N > 1 else 0.0
         entropy = -density * math.log(density + 1e-12) if density > 0 else 0.0
 
-        # Base risk
-        cyc = cycle_nodes / max(1, N)
-        lv = layer_viol / max(1, E)
+        cyc_ratio = cycle_nodes / max(1, N)
+        lv_ratio = layer_viol / max(1, E)
 
+        # Base risk (policy-weighted)
         risk = min(
             1.0,
-            0.60 * cyc
-            + 0.35 * lv
-            + 0.05 * density
+            self.policy.w_cycle * cyc_ratio
+            + self.policy.w_layer * lv_ratio
+            + self.policy.w_density * density
         )
 
-        # HARD GATES (this is what makes it “real”)
-        if skip_viol > 0:
+        # HARD GATES (policy-driven)
+        verdict = "ALLOW"
+
+        if self.policy.skip_block and skip_viol > 0:
             verdict = "BLOCK"
             risk = max(risk, 0.85)
-        elif cycle_nodes > 0 and cyc >= 0.30:
+
+        elif cycle_nodes > 0 and cyc_ratio >= float(self.policy.cycle_block_ratio):
             verdict = "BLOCK"
             risk = max(risk, 0.80)
-        elif layer_viol > 0 or cycle_nodes > 0:
+
+        elif (self.policy.cycle_warn and cycle_nodes > 0) or (self.policy.layer_warn and layer_viol > 0):
             verdict = "WARN"
             risk = max(risk, 0.55)
-        else:
-            verdict = "ALLOW"
 
         dna = (
-            f"C{min(9, int(round(cyc * 9)))} "
-            f"L{min(9, int(round(lv * 9)))} "
+            f"C{min(9, int(round(cyc_ratio * 9)))} "
+            f"L{min(9, int(round(lv_ratio * 9)))} "
             f"D{min(9, int(round(density * 9)))} "
             f"H{min(9, int(round(entropy * 9)))}"
         )
@@ -137,32 +146,32 @@ class GraphEnv:
             layer_viol=layer_viol,
             skip_viol=skip_viol,
             density=float(density),
+            policy=self.policy.name,
         )
 
 
 def make_cases() -> List[GraphEnv]:
     cases: List[GraphEnv] = []
 
-    # 1) Layered: allowed diffs {0, +1} (same layer or next layer)
-    # Layers: UI=1, Service=2, DB=3
-    g = GraphEnv(name="Layered (good)", allowed_diffs={0, 1})
+    # 1) Layered good
+    g = GraphEnv(name="Layered (good)", policy=LAYERED_3TIER)
     for n, l in [("UI", 1), ("Service", 2), ("DB", 3)]:
         g.add_node(n, l)
     g.add_edge("UI", "Service")
     g.add_edge("Service", "DB")
     cases.append(g)
 
-    g = GraphEnv(name="Layered (UI→DB skip)", allowed_diffs={0, 1})
+    # 2) Layered bad skip
+    g = GraphEnv(name="Layered (UI→DB skip)", policy=LAYERED_3TIER)
     for n, l in [("UI", 1), ("Service", 2), ("DB", 3)]:
         g.add_node(n, l)
-    g.add_edge("UI", "DB")          # skip violation (+2) => BLOCK
+    g.add_edge("UI", "DB")  # +2 => BLOCK
     g.add_edge("UI", "Service")
     g.add_edge("Service", "DB")
     cases.append(g)
 
-    # 2) Clean/Onion: dependencies point inward => allowed diffs {0, -1}
-    # Outer=4 -> ... -> Inner=1
-    g = GraphEnv(name="Clean/Onion (good inward)", allowed_diffs={0, -1})
+    # 3) Clean/Onion good inward
+    g = GraphEnv(name="Clean/Onion (good inward)", policy=INWARD_CLEAN_ONION)
     for n, l in [("Frameworks", 4), ("Adapters", 3), ("UseCases", 2), ("Entities", 1)]:
         g.add_node(n, l)
     g.add_edge("Frameworks", "Adapters")
@@ -170,15 +179,16 @@ def make_cases() -> List[GraphEnv]:
     g.add_edge("UseCases", "Entities")
     cases.append(g)
 
-    g = GraphEnv(name="Clean/Onion (bad outward dep)", allowed_diffs={0, -1})
+    # 4) Clean/Onion bad outward
+    g = GraphEnv(name="Clean/Onion (bad outward)", policy=INWARD_CLEAN_ONION)
     for n, l in [("Frameworks", 4), ("Adapters", 3), ("UseCases", 2), ("Entities", 1)]:
         g.add_node(n, l)
     g.add_edge("UseCases", "Entities")
-    g.add_edge("Entities", "Adapters")  # outward (+2) => BLOCK
+    g.add_edge("Entities", "Adapters")  # +2 => BLOCK
     cases.append(g)
 
-    # 3) Hexagonal: Adapters -> Ports -> Domain (inward)
-    g = GraphEnv(name="Hexagonal (good)", allowed_diffs={0, -1})
+    # 5) Hexagonal good
+    g = GraphEnv(name="Hexagonal (good)", policy=INWARD_HEXAGONAL)
     for n, l in [("WebAdapter", 3), ("DBAdapter", 3), ("Ports", 2), ("Domain", 1)]:
         g.add_node(n, l)
     g.add_edge("WebAdapter", "Ports")
@@ -186,16 +196,17 @@ def make_cases() -> List[GraphEnv]:
     g.add_edge("Ports", "Domain")
     cases.append(g)
 
-    g = GraphEnv(name="Hexagonal (bad Domain→DBAdapter)", allowed_diffs={0, -1})
+    # 6) Hexagonal bad outward
+    g = GraphEnv(name="Hexagonal (bad Domain→DBAdapter)", policy=INWARD_HEXAGONAL)
     for n, l in [("WebAdapter", 3), ("DBAdapter", 3), ("Ports", 2), ("Domain", 1)]:
         g.add_node(n, l)
     g.add_edge("WebAdapter", "Ports")
     g.add_edge("Ports", "Domain")
-    g.add_edge("Domain", "DBAdapter")   # outward (+2) => BLOCK
+    g.add_edge("Domain", "DBAdapter")  # +2 => BLOCK
     cases.append(g)
 
-    # 4) Microservices (no layer grammar) => allowed diffs {0}, we check cycles/density
-    g = GraphEnv(name="Microservices (sparse)", allowed_diffs={0})
+    # 7) Microservices sparse
+    g = GraphEnv(name="Microservices (sparse)", policy=FLAT_MICROSERVICES)
     for n in ["Auth", "Billing", "Orders", "Catalog", "Gateway"]:
         g.add_node(n, 1)
     g.add_edge("Gateway", "Auth")
@@ -204,16 +215,17 @@ def make_cases() -> List[GraphEnv]:
     g.add_edge("Orders", "Catalog")
     cases.append(g)
 
-    g = GraphEnv(name="Microservices (cycle Orders↔Billing)", allowed_diffs={0})
+    # 8) Microservices with cycle
+    g = GraphEnv(name="Microservices (cycle Orders↔Billing)", policy=FLAT_MICROSERVICES)
     for n in ["Orders", "Billing", "Catalog"]:
         g.add_node(n, 1)
     g.add_edge("Orders", "Billing")
-    g.add_edge("Billing", "Orders")     # cycle => WARN/BLOCK depending size
+    g.add_edge("Billing", "Orders")  # cycle
     g.add_edge("Orders", "Catalog")
     cases.append(g)
 
-    # 5) Event-driven with broker hub (no cycle, low density)
-    g = GraphEnv(name="Event-driven (broker hub)", allowed_diffs={0})
+    # 9) Event-driven hub
+    g = GraphEnv(name="Event-driven (broker hub)", policy=EVENT_DRIVEN)
     for n in ["ProducerA", "ProducerB", "ConsumerX", "ConsumerY", "Broker"]:
         g.add_node(n, 1)
     g.add_edge("ProducerA", "Broker")
@@ -222,12 +234,13 @@ def make_cases() -> List[GraphEnv]:
     g.add_edge("ConsumerY", "Broker")
     cases.append(g)
 
-    # 6) Microkernel / Plugins: Plugins -> Kernel (inward)
-    g = GraphEnv(name="Microkernel/Plugins (good)", allowed_diffs={0, -1})
-    for n, l in [("PluginA", 2), ("PluginB", 2), ("Kernel", 1)]:
-        g.add_node(n, l)
-    g.add_edge("PluginA", "Kernel")
-    g.add_edge("PluginB", "Kernel")
+    # 10) Event-driven with feedback (tolerated more)
+    g = GraphEnv(name="Event-driven (feedback loop)", policy=EVENT_DRIVEN)
+    for n in ["ServiceA", "ServiceB", "Broker"]:
+        g.add_node(n, 1)
+    g.add_edge("ServiceA", "Broker")
+    g.add_edge("Broker", "ServiceB")
+    g.add_edge("ServiceB", "Broker")  # small feedback loop
     cases.append(g)
 
     return cases
@@ -235,11 +248,11 @@ def make_cases() -> List[GraphEnv]:
 
 def main() -> None:
     cases = make_cases()
-    print("=== GitCube Graph School: 10 Architecture Graphs Simulation ===")
+    print("=== GitCube Graph School: 10 Graphs (policy-driven) ===")
     for g in cases:
         r = g.evaluate()
         print(
-            f"- {g.name:35s} | {r.verdict:5s} | "
+            f"- {g.name:36s} | policy={r.policy:20s} | {r.verdict:5s} | "
             f"risk={r.risk:.3f} | {r.dna} | "
             f"cycles={r.cycle_nodes} | L={r.layer_viol} | skip={r.skip_viol}"
         )
