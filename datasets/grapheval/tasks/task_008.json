@@ -1,0 +1,18 @@
+{
+  "id": "task_008",
+  "title": "Microservices: gateway/auth/billing + analytics via EVENT",
+  "nodes": [
+    {"id": "UI", "layer": 1},
+    {"id": "Gateway", "layer": 2},
+    {"id": "Auth", "layer": 2},
+    {"id": "Billing", "layer": 2},
+    {"id": "Bus", "layer": 2},
+    {"id": "Analytics", "layer": 2},
+    {"id": "DB", "layer": 3}
+  ],
+  "constraints": {
+    "allowed_layer_diff": [0, 1],
+    "max_density": 0.35
+  },
+  "goal": {}
+}
