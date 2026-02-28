@@ -1,95 +1,64 @@
-# -*- coding: utf-8 -*-
-import os
-import json
+# apps/grapheval/runner.py
 
-from .schema import validate_task, validate_solution
-from .scorer import GraphScorerV2
+import os, json
+from apps.grapheval.schema import validate_task, validate_solution
+from apps.grapheval.scorer import GraphScorer
 
-def _load_tasks(tasks_dir: str):
-    items = []
+def run():
+    base = os.path.dirname(__file__)
+    tasks_dir = os.path.abspath(os.path.join(base, "../../datasets/grapheval/tasks"))
+
+    print("🚀 GraphEval v0.3 (Antidote)")
+    print("-" * 70)
+
+    # demo “agent” solutions:
+    solutions = {
+        "task_009_antidote": {
+            "id": "task_009_antidote",
+            "edges": [
+                ["UI", "Service", "SYNC_CALL"],
+                ["Service", "DB", "DATA"],
+
+                # attempt to cheat: rename SYNC to FEEDBACK
+                ["DB", "UI", "FEEDBACK"],  # should be blocked by capability/quota/deadly-pair rules
+            ],
+        },
+        "task_010_feedback_ok": {
+            "id": "task_010_feedback_ok",
+            "edges": [
+                ["UI", "Service", "SYNC_CALL"],
+                ["Service", "DB", "DATA"],
+                # legal feedback via observability adapter (capability nodes)
+                ["DB", "Observer", "EVENT"],
+                ["Observer", "UI", "FEEDBACK"],
+            ],
+        },
+    }
+
     for fn in sorted(os.listdir(tasks_dir)):
         if not fn.endswith(".json"):
             continue
         path = os.path.join(tasks_dir, fn)
         with open(path, "r", encoding="utf-8") as f:
             task = json.load(f)
-        if validate_task(task):
-            items.append(task)
-    return items
 
-def run():
-    base_dir = os.path.dirname(__file__)
-    tasks_dir = os.path.abspath(os.path.join(base_dir, "../../datasets/grapheval/tasks"))
+        if not validate_task(task):
+            continue
 
-    print("🚀 GraphEval v0.2 (6-edge grammar + numeric pain)")
-    print(f"Tasks dir: {tasks_dir}")
-    print("-" * 72)
-
-    tasks = _load_tasks(tasks_dir)
-
-    # Demo solutions (hand-made “agents”)
-    SOL = {
-        "task_001": {"id": "task_001", "edges": [
-            ["UI","Service","SYNC_CALL"],
-            ["Service","DB","DATA"],
-            ["Service","Cache","DATA"],
-        ]},
-        "task_002": {"id": "task_002", "edges": [
-            ["A","B","DEP"],
-            ["B","A","DEP"],
-        ]},
-        "task_003": {"id": "task_003", "edges": [
-            ["UI","Service","SYNC_CALL"],
-            ["UI","DB","EVENT"],   # should be OK
-        ]},
-        "task_004": {"id": "task_004", "edges": [
-            ["UI","Service","SYNC_CALL"],
-            ["Service","UI","FEEDBACK"],  # legal upward channel
-            ["Service","DB","DATA"],
-        ]},
-        "task_005": {"id": "task_005", "edges": [
-            ["A","B","SYNC_CALL"], ["A","C","SYNC_CALL"], ["A","D","SYNC_CALL"],
-            ["B","A","SYNC_CALL"], ["B","C","SYNC_CALL"], ["B","D","SYNC_CALL"],
-            ["C","A","SYNC_CALL"], ["C","B","SYNC_CALL"], ["C","D","SYNC_CALL"],
-            ["D","A","SYNC_CALL"], ["D","B","SYNC_CALL"], ["D","C","SYNC_CALL"],
-        ]},
-        "task_006": {"id": "task_006", "edges": [
-            ["Service","Cache","OWN"],
-            ["UI","Service","SYNC_CALL"],
-            ["Service","DB","DATA"],
-        ]},
-        "task_007": {"id": "task_007", "edges": [
-            ["UI","API","SYNC_CALL"],
-            ["API","A","SYNC_CALL"],
-            ["A","B","DATA"],
-            ["B","DB","DATA"],
-            ["A","Bus","EVENT"],
-            ["Bus","B","EVENT"],
-        ]},
-        "task_008": {"id": "task_008", "edges": [
-            ["UI","Gateway","SYNC_CALL"],
-            ["Gateway","Auth","SYNC_CALL"],
-            ["Gateway","Billing","SYNC_CALL"],
-            ["Billing","Bus","EVENT"],
-            ["Bus","Analytics","EVENT"],
-            ["Analytics","DB","DATA"],
-        ]},
-    }
-
-    for task in tasks:
-        scorer = GraphScorerV2(task)
-        sol = SOL.get(task["id"], {"id": task["id"], "edges": []})
+        scorer = GraphScorer(task)
+        sol = solutions.get(task["id"], {"id": task["id"], "edges": []})
 
         if not validate_solution(sol):
-            print(f"❌ Invalid solution format for {task['id']}")
+            print(f"❌ invalid solution format: {task['id']}")
             continue
 
         res = scorer.score_solution(sol)
 
-        print(f"Task: {res['task_id']} — {res['title']}")
-        print(f"[{res['verdict']:^5}] score={res['score']:.3f} risk={res['risk']:.3f} dna={res['dna']}")
-        print(f"violations={res['violations']} metrics={res['metrics']}")
-        print("-" * 72)
+        print(f"Task: {task['id']} | {task['title']}")
+        print(f"[{res['verdict']:^5}] score={res['score']:.3f} risk={res['risk']:.3f} | {res['dna']}")
+        print(f"metrics: {res['metrics']}")
+        print(f"antidote: {res['antidote']}")
+        print("-" * 70)
 
 if __name__ == "__main__":
     run()
