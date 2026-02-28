@@ -1,0 +1,26 @@
+{
+  "id": "task_009_antidote",
+  "title": "Antidote: prevent fake FEEDBACK and deadly pairs",
+  "nodes": [
+    { "id": "UI", "layer": 1 },
+    { "id": "Service", "layer": 2 },
+    { "id": "DB", "layer": 3, "is_core": true }
+  ],
+  "constraints": {
+    "allowed_layer_diff": [0, 1],
+    "max_density": 0.40,
+
+    "feedback_requires_capability": true,
+    "feedback_capability_key": "can_feedback",
+    "feedback_ratio_max": 0.05,
+
+    "deadly_pairs_block": true,
+    "event_to_core_block": true,
+    "protected_nodes_key": "is_core"
+  },
+  "goal": {
+    "must_not_have_edges": [
+      ["DB", "UI", "FEEDBACK"]
+    ]
+  }
+}
