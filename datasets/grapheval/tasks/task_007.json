@@ -1,0 +1,17 @@
+{
+  "id": "task_007",
+  "title": "Pipeline DAG with EVENT bus",
+  "nodes": [
+    {"id": "UI", "layer": 1},
+    {"id": "API", "layer": 2},
+    {"id": "A", "layer": 2},
+    {"id": "B", "layer": 2},
+    {"id": "DB", "layer": 3},
+    {"id": "Bus", "layer": 2}
+  ],
+  "constraints": {
+    "allowed_layer_diff": [0, 1],
+    "max_density": 0.35
+  },
+  "goal": {}
+}
