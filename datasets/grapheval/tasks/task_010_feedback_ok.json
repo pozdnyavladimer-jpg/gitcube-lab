@@ -1,0 +1,33 @@
+{
+  "id": "task_010_feedback_ok",
+  "title": "Antidote: allow FEEDBACK only via capability adapter",
+  "nodes": [
+    { "id": "UI", "layer": 1 },
+    { "id": "Service", "layer": 2 },
+    { "id": "DB", "layer": 3, "is_core": true },
+
+    { "id": "Observer", "layer": 2, "can_feedback": true, "can_event": true }
+  ],
+  "constraints": {
+    "allowed_layer_diff": [0, 1],
+    "max_density": 0.40,
+
+    "feedback_requires_capability": true,
+    "feedback_capability_key": "can_feedback",
+    "event_capability_key": "can_event",
+
+    "feedback_ratio_max": 0.10,
+    "deadly_pairs_block": true,
+    "event_to_core_block": true,
+    "protected_nodes_key": "is_core"
+  },
+  "goal": {
+    "must_have_edges": [
+      ["Observer", "UI", "FEEDBACK"]
+    ],
+    "must_not_have_edges": [
+      ["DB", "UI", "FEEDBACK"],
+      ["UI", "DB", "SYNC_CALL"]
+    ]
+  }
+}
