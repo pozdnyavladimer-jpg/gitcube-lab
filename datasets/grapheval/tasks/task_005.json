@@ -1,0 +1,15 @@
+{
+  "id": "task_005",
+  "title": "Dense mesh should hurt (density overload)",
+  "nodes": [
+    {"id": "A", "layer": 2},
+    {"id": "B", "layer": 2},
+    {"id": "C", "layer": 2},
+    {"id": "D", "layer": 2}
+  ],
+  "constraints": {
+    "allowed_layer_diff": [0, 1],
+    "max_density": 0.25
+  },
+  "goal": {}
+}
