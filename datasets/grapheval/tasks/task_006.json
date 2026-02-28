@@ -1,0 +1,15 @@
+{
+  "id": "task_006",
+  "title": "OWN indicates composition (allowed)",
+  "nodes": [
+    {"id": "UI", "layer": 1},
+    {"id": "Service", "layer": 2},
+    {"id": "DB", "layer": 3},
+    {"id": "Cache", "layer": 3}
+  ],
+  "constraints": {
+    "allowed_layer_diff": [0, 1],
+    "max_density": 0.40
+  },
+  "goal": {}
+}
