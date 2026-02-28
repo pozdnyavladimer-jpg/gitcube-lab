@@ -1,0 +1,18 @@
+{
+  "id": "task_001",
+  "title": "Add cache without breaking layers",
+  "nodes": [
+    {"id": "UI", "layer": 1},
+    {"id": "Service", "layer": 2},
+    {"id": "DB", "layer": 3},
+    {"id": "Cache", "layer": 3}
+  ],
+  "constraints": {
+    "allowed_layer_diff": [0, 1],
+    "max_density": 0.40
+  },
+  "goal": {
+    "must_have_edges": [["Service", "Cache", "DATA"]],
+    "must_not_have_edges": [["UI", "Cache", "SYNC_CALL"]]
+  }
+}
