@@ -27,7 +27,43 @@ graph topology
 → repair attempts
 → benchmark metrics
 → persistent structural memory
+## Architecture Pipeline
 
+The system treats software architecture as a graph and evaluates its structural stability.
+
+```text
+           Software Architecture
+                   │
+                   ▼
+            Typed Graph Model
+         (nodes + typed edges)
+                   │
+                   ▼
+            GraphEval Scoring
+         structural invariants
+         cycles / layers / density
+                   │
+                   ▼
+           Structural Risk
+               0.0 – 1.0
+                   │
+        ┌──────────┴──────────┐
+        ▼                     ▼
+     ALLOW                 BLOCK
+        │                     │
+        │                     ▼
+        │              Repair Agent
+        │            (mutation loop)
+        │                     │
+        │                     ▼
+        │               New Topology
+        │                     │
+        └───────────▲─────────┘
+                    │
+               Re-evaluation
+                    │
+                    ▼
+            Benchmark Metrics
 Continuous inside.
 Discrete outside.
 Memory across time.
