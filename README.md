@@ -1,174 +1,349 @@
-# GraphEval — School of AI Architecture
+GitCube Lab
 
-GraphEval — це benchmark framework для оцінки архітектурних графів з типізованими ребрами та фізикою структурного ризику.
+Structural Risk Control, Topological Memory & Graph Architecture Benchmark
 
-LLM можуть писати код. Але вони не відчувають архітектурний біль. GraphEval вводить цей біль чисельно.
+GitCube Lab — експериментальна система контролю структури програмних архітектур.
 
----
+Проект поєднує:
 
-## 🧠 Problem
-Сучасні LLM:
-- будують графи залежностей
-- оптимізують код
-- але **не відчувають макро-архітектурних порушень**
+- GraphEval — фізику структурного ризику для графів архітектури
+- Graph School — benchmark середовище для агентів, які ремонтують архітектуру
+- Topological Memory — систему довготривалої пам'яті структурних станів
+- Kernel Sandbox — експерименти з нелінійною динамікою та фазовими переходами
 
-Вони можуть:
-- створювати цикли
-- пробивати шари
-- перевантажувати систему щільністю зв’язків
-- маскувати жорсткі виклики під "легальні" типи
-
-**GraphEval — це середовище, де ці дії мають числові наслідки.**
+Це не NLP.
+Це моделювання структурної стабільності.
 
 ---
 
-## 🧬 Core Model
+TL;DR
 
-### Nodes
-- Ідентифікатор (`id`)
-- Шар (`layer`)
-- Capability flags (`can_feedback`, `is_core`)
+GitCube Lab перетворює архітектуру системи на фізичну модель:
 
-### Edge Types (6-Edge Grammar)
-**Strict (Формують структуру та масу):**
-- `DEP` — Залежність (import/compile-time)
-- `SYNC_CALL` — Блокуючий виклик (runtime)
-- `DATA` — Передача стану
-- `OWN` — Композиція / Життєвий цикл
+graph topology
+→ structural invariants (DNA)
+→ continuous risk (0..1)
+→ discrete verdict (ALLOW / WARN / BLOCK)
+→ repair attempts
+→ benchmark metrics
+→ persistent structural memory
 
-**Soft (Ефір / Інформація):**
-- `EVENT` — Асинхронна подія (не створює структурного блокування)
-
-**Exception (Кібернетика):**
-- `FEEDBACK` — Контрольований канал вгору по шарах
-
----
-
-## ⚙ Risk Model
-Risk ∈ [0.0 – 1.0]
-
-### 1. Layer breach
-Якщо є порушення шарів (`layer_viol > 0`):
-`risk >= 0.45 + 0.10 * min(4, layer_viol)`
-
-### 2. Strict cycles
-Якщо є жорсткий цикл (`strict_cycles > 0`):
-`risk >= 0.85` та `verdict = BLOCK`
-
-### 3. Dense mesh
-Квадратичний штраф за перевищення ліміту щільності:
-`d_pen = (density / max_density - 1)^2`
-
-### 4. Adversarial protection (Anti-toxin)
-- `FEEDBACK` вимагає capability flag на обох вузлах.
-- Квота на `FEEDBACK` (наприклад, <= 5% від strict ребер).
-- `SYNC_CALL` + зворотний `FEEDBACK` між тими ж вузлами = `BLOCK` (Deadly pair).
-- `EVENT` не може напряму бити в захищені (`is_core`) вузли.
-
----
-
-## 📂 Structure
-```text
-apps/
-  grapheval/
-    __init__.py
-    schema.py
-    scorer.py
-    runner.py
-datasets/
-  grapheval/
-    tasks/
-      task_001.json
-      task_002.json
-      ...
-How to Run
-PYTHONPATH=. python -m apps.grapheval.runner
-Goal & Vision
-Навчити AI-агентів не просто генерувати код, а будувати стабільні топології з мінімальним структурним ризиком.
-GraphEval — це не лінтер. Це школа, де архітектура стає фізикою.
-🔬 Roadmap
-[ ] Agent mutation loop (Симуляція навчання)
-[ ] Adversarial LLM testing (Перевірка на злом правил)
-[ ] Real repo graph extraction
-[ ] Curriculum mode (Навчальна програма)
-[ ] Visual topology renderer
-<!-- end list -->
-
-# GitCube Lab
-**Structural Risk Control & Topological Memory Engine**
-
-GitCube Lab is an experimental control system that converts structure (topology) into:
-- **continuous risk** (0..1)
-- **discrete decisions** (ALLOW / WARN / BLOCK)
-- **persistent structural memory** (Memory Atoms → Crystal Keys)
-
-This is not NLP.  
-This is not sentiment analysis.  
-This is structural instability modeling.
-
----
-
-## TL;DR
-
-GitCube:
-1) Extracts structural invariants (DNA)  
-2) Aggregates them into continuous risk (0..1)  
-3) Computes adaptive thresholds (μ + kσ)  
-4) Produces ALLOW / WARN / BLOCK  
-5) Persists compact records (Memory Atoms)  
-6) Merges recurring states (Crystal Keys)  
-7) Enables meta-control (feedback tightening)
-
-Continuous inside.  
-Discrete outside.  
+Continuous inside.
+Discrete outside.
 Memory across time.
 
 ---
 
-## Repository Map
+GraphEval — Structural Risk Engine
 
-### Core (Topological Memory)
-- `memory/atom.py` — MemoryAtom (phase_state 1..42, flower invariant, crystal_key)
-- `memory/store.py` — JSONL store with `upsert()` merge by `crystal_key`
-- `memory/cli.py` — CLI: record / query / stats
-- `memory/meta_controller.py` — optional feedback tightening layer
+GraphEval — це benchmark framework для оцінки архітектурних графів з типізованими ребрами та фізикою структурного ризику.
 
-### Kernel Sandbox (signals → discrete “keyboard”)
-- `kuramoto13.py` — 13-node Kuramoto engine, CRYSTAL detection
-- `teleport.py` — continuous state → `O1..O7` + stable letter (a “keyboard”)
+LLM можуть писати код.
+Але вони не відчувають архітектурний біль.
 
-### Applications (examples)
-- `apps/vr_comfort/vestibular_kernel.py` — adaptive comfort controller (VR mismatch)
-- `apps/vr_comfort/demo_vr_comfort.py` — demo runner
-- `apps/graph_school/*` — (optional) graph learning/training environment
-
-Docs:
-- `docs/kernel_overview.md`
-- `docs/memory.md`
+GraphEval вводить цей біль чисельно.
 
 ---
 
-## Quickstart (Local)
+Problem
 
-Clone:
-```bash
+Сучасні LLM:
+
+- будують dependency graphs
+- оптимізують код
+- але не відчувають макроархітектурних порушень
+
+Вони можуть:
+
+- створювати цикли
+- пробивати шари
+- перевантажувати систему щільністю зв’язків
+- маскувати небезпечні виклики
+
+GraphEval — це середовище, де ці дії мають числові наслідки.
+
+---
+
+Core Model
+
+Nodes
+
+Кожен вузол має:
+
+- "id"
+- "layer"
+- capability flags
+  - "can_feedback"
+  - "is_core"
+
+---
+
+Edge Types (6-Edge Grammar)
+
+Strict edges
+
+Формують структурну масу:
+
+DEP
+SYNC_CALL
+DATA
+OWN
+
+Soft edges
+
+EVENT
+
+Асинхронна комунікація без блокування.
+
+Exception channel
+
+FEEDBACK
+
+Контрольований зворотний канал.
+
+---
+
+Structural Risk Model
+
+Risk ∈ [0.0 – 1.0]
+
+Layer breach
+
+risk >= 0.45 + 0.10 * min(4, layer_viol)
+
+Strict cycles
+
+strict_cycles > 0
+→ risk >= 0.85
+→ verdict = BLOCK
+
+Dense mesh
+
+d_pen = (density / max_density - 1)^2
+
+---
+
+Anti-Toxin Rules
+
+GraphEval містить захист від токсичних патернів.
+
+Feedback capability
+
+FEEDBACK дозволений тільки між вузлами
+які мають capability flag
+
+Feedback quota
+
+feedback_ratio ≤ limit
+
+Deadly pair
+
+SYNC_CALL(A → B)
++
+FEEDBACK(B → A)
+
+→ BLOCK
+
+Core protection
+
+EVENT → is_core
+→ BLOCK
+
+---
+
+Graph School
+
+Graph School — це benchmark середовище для агентів, які намагаються ремонтувати небезпечну архітектуру.
+
+Pipeline:
+
+task
+→ initial topology
+→ mutation operators
+→ scoring
+→ best candidate
+→ benchmark report
+
+---
+
+Agent System
+
+Directory:
+
+agent/
+  gym.py
+  mutations.py
+  train.py
+  benchmark.py
+
+gym.py
+
+Mutation loop.
+
+solution
+→ mutations
+→ scoring
+→ keep improvements
+
+mutations.py
+
+Repair operators:
+
+remove_forbidden_edges
+add_required_edges
+remove_reverse_feedback_deadly_pairs
+trim_feedback_without_capability
+remove_illegal_sync_to_core
+
+train.py
+
+Training loop.
+
+Creates:
+
+traces/train_traces.jsonl
+
+benchmark.py
+
+Runs the full benchmark and produces:
+
+reports/benchmark_report.json
+
+---
+
+Repository Structure
+
+apps/
+  grapheval/
+    schema.py
+    scorer.py
+    runner.py
+
+agent/
+  gym.py
+  mutations.py
+  train.py
+  benchmark.py
+
+datasets/
+  grapheval/
+    tasks/
+
+traces/
+  train_traces.jsonl
+
+reports/
+  benchmark_report.json
+
+memory/
+  atom.py
+  store.py
+  meta_controller.py
+
+docs/
+  benchmark.md
+  benchmark_results.md
+
+---
+
+Quickstart
+
+Clone repository:
+
 git clone https://github.com/pozdnyavladimer-jpg/gitcube-lab.git
 cd gitcube-lab
-Verify Python can import packages:
-PYTHONPATH=. python -c "import memory; print('OK')"
-Run HFS simulator (example)
-python hfs/hfs_demo.py --seed 99 --n 220 --window 20 > report.json
-Record a Memory Atom (JSON report → JSONL)
-PYTHONPATH=. python -m memory.cli record \
-  --report report.json \
-  --store memory/memory.jsonl \
-  --repo demo \
-  --ref test
-Store stats
-PYTHONPATH=. python -m memory.cli stats --store memory/memory.jsonl
-Query stored atoms
-PYTHONPATH=. python -m memory.cli query --store memory/memory.jsonl --limit 10
-Kernel Runs (Sandbox)
-python kuramoto13.py
-python teleport.py
-python apps/vr_comfort/demo_vr_comfort.py
+
+Verify Python path:
+
+PYTHONPATH=. python -c "import apps.grapheval; print('OK')"
+
+---
+
+Run GraphEval
+
+PYTHONPATH=. python -m apps.grapheval.runner
+
+---
+
+Train Repair Agent
+
+export PYTHONPATH=.
+python -m agent.train --reset
+
+Creates:
+
+traces/train_traces.jsonl
+
+---
+
+Run Benchmark
+
+export PYTHONPATH=.
+python -m agent.benchmark
+
+Creates:
+
+reports/benchmark_report.json
+
+---
+
+Topological Memory
+
+GitCube також містить систему структурної пам'яті.
+
+MemoryAtoms:
+
+structural_state
+→ invariant extraction
+→ crystal_key
+→ persistent memory
+
+Components:
+
+memory/atom.py
+memory/store.py
+memory/meta_controller.py
+
+---
+
+Kernel Sandbox
+
+Експерименти з фазовими переходами та синхронізацією:
+
+kuramoto13.py
+teleport.py
+
+---
+
+Current Status
+
+Current version:
+
+Graph School v0.1
+
+Capabilities:
+
+✔ structural risk scoring
+✔ graph mutation repair
+✔ benchmark reporting
+✔ training traces
+✔ topological memory
+
+Remaining challenge:
+
+task_010_feedback_ok
+
+This task reveals the limits of the current repair operators.
+
+---
+
+Vision
+
+Навчити AI-агентів:
+
+- не просто генерувати код
+- а будувати стабільні топології
+
+GraphEval — це не лінтер.
+
+Це фізика архітектури.
