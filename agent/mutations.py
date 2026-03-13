@@ -105,12 +105,6 @@ def trim_feedback_without_capability(task: Dict[str, Any], solution: Dict[str, A
 
 
 def reroute_feedback_via_adapter(task: Dict[str, Any], solution: Dict[str, Any]) -> Tuple[str, Dict[str, Any]]:
-    """
-    Replace toxic FEEDBACK target with a capability-enabled node if task contains one.
-    Minimal v0.1 heuristic:
-    - find first node with can_feedback=True
-    - reroute FEEDBACK edges to that node if current receiver has no capability
-    """
     sol = clone_solution(solution)
 
     flags = {}
