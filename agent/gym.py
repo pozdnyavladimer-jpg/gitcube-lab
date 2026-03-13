@@ -1,24 +1,23 @@
 # -*- coding: utf-8 -*-
-"""Architecture Gym v0.1 for GraphEval.
+"""Architecture Gym v0.2 for GraphEval.
 
 Goal:
 - take a graph task
-- try simple graph mutations
+- try graph mutations from agent.mutations
 - score each attempt with GraphScorer
-- keep improvements
-- print episode summary
+- keep only improving candidates
+- expose a stable run_episode() API for training
 
 No ML. Pure mutation + scoring loop.
 """
 
 from __future__ import annotations
 
-import copy
-import json
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Tuple
 
 from apps.grapheval.scorer import GraphScorer
+from agent.mutations import MUTATORS, clone_solution
 
 
 # ---------------------------------------------------------
@@ -48,7 +47,20 @@ class Episode:
     attempts: List[Attempt] = field(default_factory=list)
 
     def best_attempt(self) -> Attempt:
-        return max(self.attempts, key=lambda a: float(a.report.get("score", 0.0)))
+        if not self.attempts:
+            raise ValueError("Episode has no attempts")
+        return max(
+            self.attempts,
+            key=lambda a: (
+                float(a.report.get("score", 0.0) or 0.0),
+                -float(a.report.get("risk", 1.0) or 1.0),
+            ),
+        )
+
+    def last_attempt(self) -> Attempt:
+        if not self.attempts:
+            raise ValueError("Episode has no attempts")
+        return self.attempts[-1]
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -63,198 +75,100 @@ class Episode:
 # Helpers
 # ---------------------------------------------------------
 
-def edge_key(e: List[Any]) -> Tuple[str, str, str]:
-    return (str(e[0]), str(e[1]), str(e[2]))
-
-
-def clone_solution(sol: Dict[str, Any]) -> Dict[str, Any]:
-    return {
-        "id": sol["id"],
-        "edges": [list(e) for e in sol.get("edges", [])],
-    }
-
-
 def score(task: Dict[str, Any], solution: Dict[str, Any]) -> Dict[str, Any]:
     scorer = GraphScorer(task)
-    rep = scorer.score_solution(solution)
-    rep["kind"] = "GRAPH_EVAL"
-    return rep
+    report = scorer.score_solution(solution)
+    report["kind"] = "GRAPH_EVAL"
+    return report
 
 
-def pretty(rep: Dict[str, Any]) -> str:
+def pretty(report: Dict[str, Any]) -> str:
     return (
-        f"{rep.get('verdict')} | "
-        f"score={rep.get('score'):.3f} "
-        f"risk={rep.get('risk'):.3f} | "
-        f"{rep.get('dna')}"
+        f"{report.get('verdict')} | "
+        f"score={float(report.get('score', 0.0)):.3f} "
+        f"risk={float(report.get('risk', 0.0)):.3f} | "
+        f"{report.get('dna')}"
     )
 
 
-# ---------------------------------------------------------
-# Simple mutation operators
-# ---------------------------------------------------------
+def _is_better(candidate: Dict[str, Any], current: Dict[str, Any]) -> bool:
+    """
+    Better means:
+    1. strictly higher score
+    2. if equal score -> lower risk
+    """
+    cand_score = float(candidate.get("score", 0.0) or 0.0)
+    curr_score = float(current.get("score", 0.0) or 0.0)
 
-def remove_forbidden_edges(task: Dict[str, Any], solution: Dict[str, Any]) -> Tuple[str, Dict[str, Any]]:
-    sol = clone_solution(solution)
-    forbidden = set()
+    if cand_score > curr_score:
+        return True
+    if cand_score < curr_score:
+        return False
 
-    goal = task.get("goal") if isinstance(task.get("goal"), dict) else {}
-    for e in goal.get("must_not_have_edges", []):
-        if len(e) >= 3:
-            forbidden.add((e[0], e[1], e[2]))
-
-    before = len(sol["edges"])
-    sol["edges"] = [e for e in sol["edges"] if edge_key(e) not in forbidden]
-    removed = before - len(sol["edges"])
-
-    return f"remove_forbidden_edges removed={removed}", sol
-
-
-def add_required_edges(task: Dict[str, Any], solution: Dict[str, Any]) -> Tuple[str, Dict[str, Any]]:
-    sol = clone_solution(solution)
-    existing = {edge_key(e) for e in sol["edges"]}
-
-    goal = task.get("goal") if isinstance(task.get("goal"), dict) else {}
-    added = 0
-    for e in goal.get("must_have_edges", []):
-        if len(e) >= 3:
-            k = (e[0], e[1], e[2])
-            if k not in existing:
-                sol["edges"].append([e[0], e[1], e[2]])
-                existing.add(k)
-                added += 1
-
-    return f"add_required_edges added={added}", sol
-
-
-def remove_reverse_feedback_deadly_pairs(task: Dict[str, Any], solution: Dict[str, Any]) -> Tuple[str, Dict[str, Any]]:
-    sol = clone_solution(solution)
-
-    sync_pairs = set()
-    feedback_pairs = set()
-
-    for e in sol["edges"]:
-        u, v, t = e[0], e[1], e[2]
-        if t == "SYNC_CALL":
-            sync_pairs.add((u, v))
-        if t == "FEEDBACK":
-            feedback_pairs.add((u, v))
-
-    deadly_feedback = set()
-    for (a, b) in sync_pairs:
-        if (b, a) in feedback_pairs:
-            deadly_feedback.add((b, a, "FEEDBACK"))
-
-    before = len(sol["edges"])
-    sol["edges"] = [e for e in sol["edges"] if edge_key(e) not in deadly_feedback]
-    removed = before - len(sol["edges"])
-
-    return f"remove_reverse_feedback_deadly_pairs removed={removed}", sol
-
-
-def remove_illegal_sync_to_core(task: Dict[str, Any], solution: Dict[str, Any]) -> Tuple[str, Dict[str, Any]]:
-    sol = clone_solution(solution)
-
-    core_nodes = {
-        n["id"]
-        for n in task.get("nodes", [])
-        if isinstance(n, dict) and bool(n.get("is_core", False))
-    }
-
-    before = len(sol["edges"])
-    sol["edges"] = [
-        e for e in sol["edges"]
-        if not (e[2] == "SYNC_CALL" and e[1] in core_nodes and e[0] != e[1] and e[0] != "Service")
-    ]
-    removed = before - len(sol["edges"])
-
-    return f"remove_illegal_sync_to_core removed={removed}", sol
-
-
-def trim_feedback_without_capability(task: Dict[str, Any], solution: Dict[str, Any]) -> Tuple[str, Dict[str, Any]]:
-    sol = clone_solution(solution)
-
-    flags = {}
-    for n in task.get("nodes", []):
-        if isinstance(n, dict):
-            flags[n["id"]] = n
-
-    before = len(sol["edges"])
-    kept = []
-    removed = 0
-
-    feedback_key = "can_feedback"
-    constraints = task.get("constraints") if isinstance(task.get("constraints"), dict) else {}
-    if "feedback_capability_key" in constraints:
-        feedback_key = str(constraints["feedback_capability_key"])
-
-    for e in sol["edges"]:
-        u, v, t = e[0], e[1], e[2]
-        if t != "FEEDBACK":
-            kept.append(e)
-            continue
-
-        if flags.get(u, {}).get(feedback_key, False) and flags.get(v, {}).get(feedback_key, False):
-            kept.append(e)
-        else:
-            removed += 1
-
-    sol["edges"] = kept
-    return f"trim_feedback_without_capability removed={removed}", sol
+    cand_risk = float(candidate.get("risk", 1.0) or 1.0)
+    curr_risk = float(current.get("risk", 1.0) or 1.0)
+    return cand_risk < curr_risk
 
 
 # ---------------------------------------------------------
 # Episode loop
 # ---------------------------------------------------------
 
-MUTATORS = [
-    remove_forbidden_edges,
-    add_required_edges,
-    remove_reverse_feedback_deadly_pairs,
-    trim_feedback_without_capability,
-    remove_illegal_sync_to_core,
-]
-
-
 def run_episode(task: Dict[str, Any], initial_solution: Dict[str, Any], max_steps: int = 6) -> Episode:
-    ep = Episode(task_id=str(task["id"]), title=str(task["title"]))
-
-    current = clone_solution(initial_solution)
-    current_report = score(task, current)
-    ep.attempts.append(
-        Attempt(step=0, action="initial", solution=clone_solution(current), report=current_report)
+    ep = Episode(
+        task_id=str(task.get("id") or "unknown_task"),
+        title=str(task.get("title") or ""),
     )
+
+    current_solution = clone_solution(initial_solution)
+    current_report = score(task, current_solution)
+
+    ep.attempts.append(
+        Attempt(
+            step=0,
+            action="initial",
+            solution=clone_solution(current_solution),
+            report=current_report,
+        )
+    )
+
+    if str(current_report.get("verdict", "")).upper() == "ALLOW":
+        return ep
 
     step = 1
     while step <= max_steps:
-        best_local_sol = None
-        best_local_rep = None
-        best_action = None
+        best_local_solution = None
+        best_local_report = None
+        best_local_action = None
 
-        for mut in MUTATORS:
-            action, candidate = mut(task, current)
-            rep = score(task, candidate)
+        for mutator in MUTATORS:
+            action, candidate_solution = mutator(task, current_solution)
+            candidate_report = score(task, candidate_solution)
 
-            if best_local_rep is None or float(rep["score"]) > float(best_local_rep["score"]):
-                best_local_sol = candidate
-                best_local_rep = rep
-                best_action = action
+            if best_local_report is None or _is_better(candidate_report, best_local_report):
+                best_local_solution = candidate_solution
+                best_local_report = candidate_report
+                best_local_action = action
 
-        if best_local_rep is None:
+        if best_local_solution is None or best_local_report is None or best_local_action is None:
             break
 
-        # stop if no improvement
-        if float(best_local_rep["score"]) <= float(current_report["score"]):
+        if not _is_better(best_local_report, current_report):
             break
 
-        current = best_local_sol
-        current_report = best_local_rep
+        current_solution = clone_solution(best_local_solution)
+        current_report = best_local_report
 
         ep.attempts.append(
-            Attempt(step=step, action=str(best_action), solution=clone_solution(current), report=current_report)
+            Attempt(
+                step=step,
+                action=str(best_local_action),
+                solution=clone_solution(current_solution),
+                report=current_report,
+            )
         )
 
-        if str(current_report.get("verdict")) == "ALLOW":
+        if str(current_report.get("verdict", "")).upper() == "ALLOW":
             break
 
         step += 1
@@ -300,6 +214,7 @@ def demo_task_009() -> Tuple[Dict[str, Any], Dict[str, Any]]:
             ["DB", "UI", "FEEDBACK"],
         ],
     }
+
     return task, bad_solution
 
 
@@ -344,6 +259,7 @@ def demo_task_010() -> Tuple[Dict[str, Any], Dict[str, Any]]:
             ["DB", "UI", "FEEDBACK"],
         ],
     }
+
     return task, weak_solution
 
 
@@ -351,7 +267,7 @@ def demo_task_010() -> Tuple[Dict[str, Any], Dict[str, Any]]:
 # CLI demo
 # ---------------------------------------------------------
 
-def main():
+def main() -> None:
     demos = [
         demo_task_009(),
         demo_task_010(),
@@ -364,10 +280,10 @@ def main():
         print(f"TASK: {task['id']} | {task['title']}")
         print("-" * 80)
 
-        for a in ep.attempts:
-            print(f"[step {a.step}] {a.action}")
-            print(" ", pretty(a.report))
-            print(" ", "edges:", a.solution["edges"])
+        for attempt in ep.attempts:
+            print(f"[step {attempt.step}] {attempt.action}")
+            print(" ", pretty(attempt.report))
+            print(" ", "edges:", attempt.solution["edges"])
 
         best = ep.best_attempt()
         print("-" * 80)
@@ -376,9 +292,6 @@ def main():
         print(" ", "action:", best.action)
         print("=" * 80)
         print()
-
-    # Optional JSON dump:
-    # print(json.dumps(ep.to_dict(), ensure_ascii=False, indent=2))
 
 
 if __name__ == "__main__":
