@@ -383,3 +383,70 @@ Vision
 GraphEval — це не лінтер.
 
 Це фізика архітектури.
+┌─────────────────────────────┐
+                    │        INPUT FIELD           │
+                    │ Architecture / Code Graphs   │
+                    │ datasets/grapheval/tasks     │
+                    └───────────────┬──────────────┘
+                                    │
+                                    ▼
+                    ┌─────────────────────────────┐
+                    │       GRAPH STRUCTURE       │
+                    │ typed nodes + typed edges   │
+                    │ apps/grapheval/schema.py    │
+                    └───────────────┬──────────────┘
+                                    │
+                                    ▼
+                    ┌─────────────────────────────┐
+                    │    STRUCTURAL PHYSICS       │
+                    │ GraphEval Risk Engine       │
+                    │ cycles / layers / density   │
+                    │ apps/grapheval/scorer.py    │
+                    └───────────────┬──────────────┘
+                                    │
+                          risk ∈ [0..1]
+                                    │
+                      ┌─────────────┴─────────────┐
+                      ▼                           ▼
+               ┌──────────────┐           ┌──────────────┐
+               │   ALLOW      │           │   BLOCK      │
+               │ stable graph │           │ unsafe graph │
+               └──────┬───────┘           └──────┬───────┘
+                      │                          │
+                      │                          ▼
+                      │               ┌────────────────────┐
+                      │               │     AGENT GYM       │
+                      │               │ mutation operators  │
+                      │               │ agent/gym.py        │
+                      │               │ agent/mutations.py  │
+                      │               └─────────┬───────────┘
+                      │                         │
+                      │                 new topology
+                      │                         │
+                      └───────────────▲─────────┘
+                                      │
+                                 re-score
+                                      │
+                                      ▼
+                    ┌─────────────────────────────┐
+                    │      BENCHMARK LAYER        │
+                    │ training traces             │
+                    │ traces/train_traces.jsonl   │
+                    │ reports/benchmark_report    │
+                    └───────────────┬──────────────┘
+                                    │
+                                    ▼
+                    ┌─────────────────────────────┐
+                    │       MEMORY FIELD          │
+                    │ structural memory atoms     │
+                    │ memory/store.py             │
+                    │ memory/meta_controller.py   │
+                    └───────────────┬──────────────┘
+                                    │
+                                    ▼
+                    ┌─────────────────────────────┐
+                    │      CRYSTAL TOPOLOGY       │
+                    │ final structural state      │
+                    │ verdict: ALLOW / WARN /     │
+                    │ BLOCK                       │
+                    └─────────────────────────────┘
