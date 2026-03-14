@@ -18,7 +18,20 @@ GitCube Lab — експериментальна система контролю
 
 Це не NLP.
 Це моделювання структурної стабільності.
+## Canonical pipeline
 
+GitCube Lab now has a single pipeline entrypoint:
+
+agent/pipeline.py
+
+It runs:
+
+task
+→ GraphEval
+→ repair loop
+→ memory recording
+→ orchestrator decision
+→ final governed result
 ---
 
 TL;DR
