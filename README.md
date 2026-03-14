@@ -32,6 +32,15 @@ task
 → memory recording
 → orchestrator decision
 → final governed result
+## Entry points
+
+GitCube Lab has two main entrypoints:
+
+1. `agent/pipeline.py`  
+   canonical task-based architecture pipeline
+
+2. `apps/graph_ai/pipeline_bridge.py`  
+   prompt-to-graph bridge connected to the same pipeline
 ---
 
 TL;DR
