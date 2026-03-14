@@ -25,7 +25,106 @@ graph topology
 The goal is to train AI agents that can **detect and repair architectural instability**.
 
 ---
+# Architecture Pain
 
+Modern AI systems can generate code, but they rarely understand **architecture stability**.
+
+Large language models optimize locally:
+
+- functions
+- classes
+- files
+
+But software systems fail at the **topology level**.
+
+Typical architectural failures include:
+
+- dependency cycles
+- layer violations
+- hidden feedback loops
+- explosive coupling
+- uncontrolled graph density
+
+These failures often do not appear in unit tests or static linters.
+
+They emerge only when the **system topology becomes unstable**.
+
+---
+
+## Why LLMs struggle with architecture
+
+Most AI systems operate on **token probability**.
+
+They are optimized to produce:
+syntactically correct locally coherent test-passing code
+But architecture stability depends on **global graph structure**.
+
+For example:
+A → B B → C C → A
+This creates a cycle.
+
+The code may compile.
+Tests may pass.
+
+But the architecture becomes **structurally unstable**.
+
+LLMs do not naturally perceive this type of risk.
+
+---
+
+## Architecture as a physical system
+
+GitCube approaches software architecture as a **physical topology**.
+
+Instead of reasoning about text, GitCube reasons about **graphs**.
+nodes  = system components edges  = dependency relations topology = architecture structure
+Structural invariants define system stability.
+
+Examples:
+
+- cycle pressure
+- SCC expansion
+- dependency density
+- layer flow violations
+
+These invariants are converted into a **continuous risk value**:
+risk ∈ [0..1]
+and a discrete verdict:
+ALLOW WARN BLOCK
+---
+
+## Introducing Architectural Pain
+
+GitCube introduces **numerical consequences** for structural mistakes.
+
+Architectural errors produce measurable pressure:
+cycle → critical risk layer breach → elevated risk dense mesh → quadratic penalty
+This creates something missing in current AI systems:
+architecture pain
+Agents can now **feel when architecture becomes unstable**.
+
+---
+
+## From Code Generation to Architecture Reasoning
+
+GitCube aims to shift AI development from:
+code completion
+to:
+architecture reasoning
+Instead of only writing code, agents must learn to:
+
+- detect structural instability
+- repair graph topology
+- preserve architectural invariants
+- converge to stable system design
+
+Graph School is the environment where agents learn this behavior.
+
+---
+
+In short:
+
+**GitCube teaches AI to feel architectural pain before systems collapse.**
 # System Map
 
 ```
