@@ -1,5 +1,10 @@
 GitCube Lab
+Important files for orientation:
 
+docs/NOW.md
+docs/MAP.md
+docs/HISTORY.md
+docs/IDEAS_INBOX.md
 Structural Risk Control, Topological Memory & Graph Architecture Benchmark
 
 GitCube Lab — експериментальна система контролю структури програмних архітектур.
