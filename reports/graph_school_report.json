@@ -1,0 +1,3229 @@
+{
+  "benchmark": "Graph School Baselines v0.1",
+  "tasks_dir": "datasets/grapheval/tasks",
+  "task_count": 10,
+  "agents": {
+    "random_agent": {
+      "summary": {
+        "tasks": 10,
+        "pass_at_1": 0.8,
+        "pass_at_3": 0.8,
+        "pass_at_6": 0.8,
+        "mean_initial_score": 0.808,
+        "mean_best_score": 0.839,
+        "repair_gain_mean": 0.031,
+        "block_escape_rate": 0.5,
+        "goal_satisfaction_rate": 0.9,
+        "hard_failures": [
+          "task_010_feedback_ok"
+        ]
+      },
+      "items": [
+        {
+          "agent": "random_agent",
+          "task_id": "task_001",
+          "title": "Add cache without breaking layers",
+          "score_initial": 0.04,
+          "verdict_initial": "BLOCK",
+          "score_best": 0.35,
+          "verdict_best": "WARN",
+          "risk_best": 0.65,
+          "dna_best": "C0 L4 D0 H3",
+          "goal_failed_best": false,
+          "history": [
+            {
+              "step": 0,
+              "action": "initial",
+              "score": 0.04,
+              "verdict": "BLOCK"
+            },
+            {
+              "step": 1,
+              "action": "add_edge",
+              "score": 0.04,
+              "verdict": "BLOCK"
+            },
+            {
+              "step": 2,
+              "action": "add_edge",
+              "score": 0.04,
+              "verdict": "BLOCK"
+            },
+            {
+              "step": 3,
+              "action": "remove_edge",
+              "score": 0.04,
+              "verdict": "BLOCK"
+            },
+            {
+              "step": 4,
+              "action": "add_edge",
+              "score": 0.04,
+              "verdict": "BLOCK"
+            },
+            {
+              "step": 5,
+              "action": "change_type",
+              "score": 0.04,
+              "verdict": "BLOCK"
+            },
+            {
+              "step": 6,
+              "action": "change_type",
+              "score": 0.35,
+              "verdict": "WARN"
+            },
+            {
+              "step": 7,
+              "action": "change_type",
+              "score": 0.35,
+              "verdict": "WARN"
+            },
+            {
+              "step": 8,
+              "action": "change_type",
+              "score": 0.35,
+              "verdict": "WARN"
+            },
+            {
+              "step": 9,
+              "action": "add_edge",
+              "score": 0.15,
+              "verdict": "BLOCK"
+            },
+            {
+              "step": 10,
+              "action": "change_type",
+              "score": 0.35,
+              "verdict": "WARN"
+            },
+            {
+              "step": 11,
+              "action": "add_edge",
+              "score": 0.35,
+              "verdict": "WARN"
+            },
+            {
+              "step": 12,
+              "action": "remove_edge",
+              "score": 0.35,
+              "verdict": "WARN"
+            },
+            {
+              "step": 13,
+              "action": "swap_endpoint",
+              "score": 0.04,
+              "verdict": "BLOCK"
+            },
+            {
+              "step": 14,
+              "action": "change_type",
+              "score": 0.04,
+              "verdict": "BLOCK"
+            },
+            {
+              "step": 15,
+              "action": "remove_edge",
+              "score": 0.04,
+              "verdict": "BLOCK"
+            },
+            {
+              "step": 16,
+              "action": "change_type",
+              "score": 0.04,
+              "verdict": "BLOCK"
+            },
+            {
+              "step": 17,
+              "action": "add_edge",
+              "score": 0.04,
+              "verdict": "BLOCK"
+            },
+            {
+              "step": 18,
+              "action": "add_edge",
+              "score": 0.04,
+              "verdict": "BLOCK"
+            },
+            {
+              "step": 19,
+              "action": "swap_endpoint",
+              "score": 0.03,
+              "verdict": "BLOCK"
+            },
+            {
+              "step": 20,
+              "action": "change_type",
+              "score": 0.03,
+              "verdict": "BLOCK"
+            }
+          ],
+          "best_solution": {
+            "id": "task_001",
+            "edges": [
+              [
+                "UI",
+                "Service",
+                "DATA"
+              ],
+              [
+                "UI",
+                "DB",
+                "DATA"
+              ],
+              [
+                "UI",
+                "Cache",
+                "DATA"
+              ],
+              [
+                "Service",
+                "Cache",
+                "DATA"
+              ]
+            ]
+          },
+          "best_report": {
+            "task_id": "task_001",
+            "verdict": "WARN",
+            "risk": 0.65,
+            "score": 0.35,
+            "dna": "C0 L4 D0 H3",
+            "metrics": {
+              "N": 4,
+              "E": 4,
+              "density": 0.333,
+              "entropy": 0.366,
+              "strict_cycle_nodes": 0,
+              "layer_viol": 2,
+              "deadly_pairs": 0,
+              "strict_count": 4,
+              "feedback_count": 0,
+              "event_count": 0
+            },
+            "antidote": {
+              "feedback_cap_viol": 0,
+              "feedback_quota_viol": 0,
+              "event_cap_viol": 0,
+              "event_core_hits": 0
+            },
+            "violations": {
+              "goal_failed": false
+            }
+          }
+        },
+        {
+          "agent": "random_agent",
+          "task_id": "task_002",
+          "title": "Dependency cycle must be BLOCK",
+          "score_initial": 1.0,
+          "verdict_initial": "ALLOW",
+          "score_best": 1.0,
+          "verdict_best": "ALLOW",
+          "risk_best": 0.0,
+          "dna_best": "C0 L0 D0 H0",
+          "goal_failed_best": false,
+          "history": [
+            {
+              "step": 0,
+              "action": "initial",
+              "score": 1.0,
+              "verdict": "ALLOW"
+            },
+            {
+              "step": 1,
+              "action": "add_edge",
+              "score": 1.0,
+              "verdict": "ALLOW"
+            },
+            {
+              "step": 2,
+              "action": "add_edge",
+              "score": 0.911,
+              "verdict": "ALLOW"
+            },
+            {
+              "step": 3,
+              "action": "remove_edge",
+              "score": 1.0,
+              "verdict": "ALLOW"
+            },
+            {
+              "step": 4,
+              "action": "add_edge",
+              "score": 0.911,
+              "verdict": "ALLOW"
+            },
+            {
+              "step": 5,
+              "action": "change_type",
+              "score": 1.0,
+              "verdict": "ALLOW"
+            },
+            {
+              "step": 6,
+              "action": "change_type",
+              "score": 1.0,
+              "verdict": "ALLOW"
+            },
+            {
+              "step": 7,
+              "action": "change_type",
+              "score": 1.0,
+              "verdict": "ALLOW"
+            },
+            {
+              "step": 8,
+              "action": "change_type",
+              "score": 1.0,
+              "verdict": "ALLOW"
+            },
+            {
+              "step": 9,
+              "action": "add_edge",
+              "score": 0.15,
+              "verdict": "BLOCK"
+            },
+            {
+              "step": 10,
+              "action": "change_type",
+              "score": 0.15,
+              "verdict": "BLOCK"
+            },
+            {
+              "step": 11,
+              "action": "add_edge",
+              "score": 0.15,
+              "verdict": "BLOCK"
+            },
+            {
+              "step": 12,
+              "action": "remove_edge",
+              "score": 1.0,
+              "verdict": "ALLOW"
+            },
+            {
+              "step": 13,
+              "action": "swap_endpoint",
+              "score": 1.0,
+              "verdict": "ALLOW"
+            },
+            {
+              "step": 14,
+              "action": "change_type",
+              "score": 1.0,
+              "verdict": "ALLOW"
+            },
+            {
+              "step": 15,
+              "action": "remove_edge",
+              "score": 1.0,
+              "verdict": "ALLOW"
+            },
+            {
+              "step": 16,
+              "action": "change_type(noop)",
+              "score": 1.0,
+              "verdict": "ALLOW"
+            },
+            {
+              "step": 17,
+              "action": "remove_edge(noop)",
+              "score": 1.0,
+              "verdict": "ALLOW"
+            },
+            {
+              "step": 18,
+              "action": "add_edge",
+              "score": 1.0,
+              "verdict": "ALLOW"
+            },
+            {
+              "step": 19,
+              "action": "add_edge",
+              "score": 1.0,
+              "verdict": "ALLOW"
+            },
+            {
+              "step": 20,
+              "action": "swap_endpoint",
+              "score": 1.0,
+              "verdict": "ALLOW"
+            }
+          ],
+          "best_solution": {
+            "id": "task_002",
+            "edges": []
+          },
+          "best_report": {
+            "task_id": "task_002",
+            "verdict": "ALLOW",
+            "risk": 0.0,
+            "score": 1.0,
+            "dna": "C0 L0 D0 H0",
+            "metrics": {
+              "N": 2,
+              "E": 0,
+              "density": 0.0,
+              "entropy": 0.0,
+              "strict_cycle_nodes": 0,
+              "layer_viol": 0,
+              "deadly_pairs": 0,
+              "strict_count": 0,
+              "feedback_count": 0,
+              "event_count": 0
+            },
+            "antidote": {
+              "feedback_cap_viol": 0,
+              "feedback_quota_viol": 0,
+              "event_cap_viol": 0,
+              "event_core_hits": 0
+            },
+            "violations": {
+              "goal_failed": false
+            }
+          }
+        },
+        {
+          "agent": "random_agent",
+          "task_id": "task_003",
+          "title": "Touch the core: EVENT is OK, SYNC is not",
+          "score_initial": 1.0,
+          "verdict_initial": "ALLOW",
+          "score_best": 1.0,
+          "verdict_best": "ALLOW",
+          "risk_best": 0.0,
+          "dna_best": "C0 L0 D0 H3",
+          "goal_failed_best": false,
+          "history": [
+            {
+              "step": 0,
+              "action": "initial",
+              "score": 1.0,
+              "verdict": "ALLOW"
+            },
+            {
+              "step": 1,
+              "action": "add_edge",
+              "score": 1.0,
+              "verdict": "ALLOW"
+            },
+            {
+              "step": 2,
+              "action": "remove_edge",
+              "score": 1.0,
+              "verdict": "ALLOW"
+            },
+            {
+              "step": 3,
+              "action": "add_edge",
+              "score": 0.15,
+              "verdict": "BLOCK"
+            },
+            {
+              "step": 4,
+              "action": "remove_edge",
+              "score": 0.15,
+              "verdict": "BLOCK"
+            },
+            {
+              "step": 5,
+              "action": "add_edge",
+              "score": 0.15,
+              "verdict": "BLOCK"
+            },
+            {
+              "step": 6,
+              "action": "swap_endpoint",
+              "score": 0.15,
+              "verdict": "BLOCK"
+            },
+            {
+              "step": 7,
+              "action": "add_edge",
+              "score": 0.15,
+              "verdict": "BLOCK"
+            },
+            {
+              "step": 8,
+              "action": "remove_edge",
+              "score": 0.2,
+              "verdict": "BLOCK"
+            },
+            {
+              "step": 9,
+              "action": "change_type",
+              "score": 0.2,
+              "verdict": "BLOCK"
+            },
+            {
+              "step": 10,
+              "action": "change_type",
+              "score": 0.15,
+              "verdict": "BLOCK"
+            },
+            {
+              "step": 11,
+              "action": "add_edge",
+              "score": 0.15,
+              "verdict": "BLOCK"
+            },
+            {
+              "step": 12,
+              "action": "swap_endpoint",
+              "score": 0.15,
+              "verdict": "BLOCK"
+            },
+            {
+              "step": 13,
+              "action": "change_type",
+              "score": 0.15,
+              "verdict": "BLOCK"
+            },
+            {
+              "step": 14,
+              "action": "remove_edge",
+              "score": 0.15,
+              "verdict": "BLOCK"
+            },
+            {
+              "step": 15,
+              "action": "remove_edge",
+              "score": 0.2,
+              "verdict": "BLOCK"
+            },
+            {
+              "step": 16,
+              "action": "swap_endpoint",
+              "score": 0.15,
+              "verdict": "BLOCK"
+            },
+            {
+              "step": 17,
+              "action": "change_type",
+              "score": 0.15,
+              "verdict": "BLOCK"
+            },
+            {
+              "step": 18,
+              "action": "remove_edge",
+              "score": 0.15,
+              "verdict": "BLOCK"
+            },
+            {
+              "step": 19,
+              "action": "change_type",
+              "score": 0.2,
+              "verdict": "BLOCK"
+            },
+            {
+              "step": 20,
+              "action": "add_edge",
+              "score": 0.2,
+              "verdict": "BLOCK"
+            }
+          ],
+          "best_solution": {
+            "id": "task_003",
+            "edges": [
+              [
+                "UI",
+                "Service",
+                "SYNC_CALL"
+              ],
+              [
+                "Service",
+                "DB",
+                "SYNC_CALL"
+              ]
+            ]
+          },
+          "best_report": {
+            "task_id": "task_003",
+            "verdict": "ALLOW",
+            "risk": 0.0,
+            "score": 1.0,
+            "dna": "C0 L0 D0 H3",
+            "metrics": {
+              "N": 3,
+              "E": 2,
+              "density": 0.333,
+              "entropy": 0.366,
+              "strict_cycle_nodes": 0,
+              "layer_viol": 0,
+              "deadly_pairs": 0,
+              "strict_count": 2,
+              "feedback_count": 0,
+              "event_count": 0
+            },
+            "antidote": {
+              "feedback_cap_viol": 0,
+              "feedback_quota_viol": 0,
+              "event_cap_viol": 0,
+              "event_core_hits": 0
+            },
+            "violations": {
+              "goal_failed": false
+            }
+          }
+        },
+        {
+          "agent": "random_agent",
+          "task_id": "task_004",
+          "title": "FEEDBACK upward is legal control channel",
+          "score_initial": 1.0,
+          "verdict_initial": "ALLOW",
+          "score_best": 1.0,
+          "verdict_best": "ALLOW",
+          "risk_best": 0.0,
+          "dna_best": "C0 L0 D0 H3",
+          "goal_failed_best": false,
+          "history": [
+            {
+              "step": 0,
+              "action": "initial",
+              "score": 1.0,
+              "verdict": "ALLOW"
+            },
+            {
+              "step": 1,
+              "action": "add_edge",
+              "score": 1.0,
+              "verdict": "ALLOW"
+            },
+            {
+              "step": 2,
+              "action": "remove_edge",
+              "score": 1.0,
+              "verdict": "ALLOW"
+            },
+            {
+              "step": 3,
+              "action": "add_edge",
+              "score": 0.15,
+              "verdict": "BLOCK"
+            },
+            {
+              "step": 4,
+              "action": "remove_edge",
+              "score": 0.15,
+              "verdict": "BLOCK"
+            },
+            {
+              "step": 5,
+              "action": "add_edge",
+              "score": 0.15,
+              "verdict": "BLOCK"
+            },
+            {
+              "step": 6,
+              "action": "swap_endpoint",
+              "score": 0.15,
+              "verdict": "BLOCK"
+            },
+            {
+              "step": 7,
+              "action": "add_edge",
+              "score": 0.15,
+              "verdict": "BLOCK"
+            },
+            {
+              "step": 8,
+              "action": "remove_edge",
+              "score": 0.2,
+              "verdict": "BLOCK"
+            },
+            {
+              "step": 9,
+              "action": "change_type",
+              "score": 0.2,
+              "verdict": "BLOCK"
+            },
+            {
+              "step": 10,
+              "action": "change_type",
+              "score": 0.15,
+              "verdict": "BLOCK"
+            },
+            {
+              "step": 11,
+              "action": "add_edge",
+              "score": 0.15,
+              "verdict": "BLOCK"
+            },
+            {
+              "step": 12,
+              "action": "swap_endpoint",
+              "score": 0.15,
+              "verdict": "BLOCK"
+            },
+            {
+              "step": 13,
+              "action": "change_type",
+              "score": 0.15,
+              "verdict": "BLOCK"
+            },
+            {
+              "step": 14,
+              "action": "remove_edge",
+              "score": 0.15,
+              "verdict": "BLOCK"
+            },
+            {
+              "step": 15,
+              "action": "remove_edge",
+              "score": 0.2,
+              "verdict": "BLOCK"
+            },
+            {
+              "step": 16,
+              "action": "swap_endpoint",
+              "score": 0.15,
+              "verdict": "BLOCK"
+            },
+            {
+              "step": 17,
+              "action": "change_type",
+              "score": 0.15,
+              "verdict": "BLOCK"
+            },
+            {
+              "step": 18,
+              "action": "remove_edge",
+              "score": 0.15,
+              "verdict": "BLOCK"
+            },
+            {
+              "step": 19,
+              "action": "change_type",
+              "score": 0.2,
+              "verdict": "BLOCK"
+            },
+            {
+              "step": 20,
+              "action": "add_edge",
+              "score": 0.2,
+              "verdict": "BLOCK"
+            }
+          ],
+          "best_solution": {
+            "id": "task_004",
+            "edges": [
+              [
+                "UI",
+                "Service",
+                "SYNC_CALL"
+              ],
+              [
+                "Service",
+                "DB",
+                "SYNC_CALL"
+              ]
+            ]
+          },
+          "best_report": {
+            "task_id": "task_004",
+            "verdict": "ALLOW",
+            "risk": 0.0,
+            "score": 1.0,
+            "dna": "C0 L0 D0 H3",
+            "metrics": {
+              "N": 3,
+              "E": 2,
+              "density": 0.333,
+              "entropy": 0.366,
+              "strict_cycle_nodes": 0,
+              "layer_viol": 0,
+              "deadly_pairs": 0,
+              "strict_count": 2,
+              "feedback_count": 0,
+              "event_count": 0
+            },
+            "antidote": {
+              "feedback_cap_viol": 0,
+              "feedback_quota_viol": 0,
+              "event_cap_viol": 0,
+              "event_core_hits": 0
+            },
+            "violations": {
+              "goal_failed": false
+            }
+          }
+        },
+        {
+          "agent": "random_agent",
+          "task_id": "task_005",
+          "title": "Dense mesh should hurt (density overload)",
+          "score_initial": 1.0,
+          "verdict_initial": "ALLOW",
+          "score_best": 1.0,
+          "verdict_best": "ALLOW",
+          "risk_best": 0.0,
+          "dna_best": "C0 L0 D0 H0",
+          "goal_failed_best": false,
+          "history": [
+            {
+              "step": 0,
+              "action": "initial",
+              "score": 1.0,
+              "verdict": "ALLOW"
+            },
+            {
+              "step": 1,
+              "action": "add_edge",
+              "score": 1.0,
+              "verdict": "ALLOW"
+            },
+            {
+              "step": 2,
+              "action": "add_edge",
+              "score": 1.0,
+              "verdict": "ALLOW"
+            },
+            {
+              "step": 3,
+              "action": "remove_edge",
+              "score": 1.0,
+              "verdict": "ALLOW"
+            },
+            {
+              "step": 4,
+              "action": "add_edge",
+              "score": 1.0,
+              "verdict": "ALLOW"
+            },
+            {
+              "step": 5,
+              "action": "change_type",
+              "score": 1.0,
+              "verdict": "ALLOW"
+            },
+            {
+              "step": 6,
+              "action": "change_type",
+              "score": 1.0,
+              "verdict": "ALLOW"
+            },
+            {
+              "step": 7,
+              "action": "change_type",
+              "score": 1.0,
+              "verdict": "ALLOW"
+            },
+            {
+              "step": 8,
+              "action": "change_type",
+              "score": 1.0,
+              "verdict": "ALLOW"
+            },
+            {
+              "step": 9,
+              "action": "add_edge",
+              "score": 0.15,
+              "verdict": "BLOCK"
+            },
+            {
+              "step": 10,
+              "action": "change_type",
+              "score": 0.15,
+              "verdict": "BLOCK"
+            },
+            {
+              "step": 11,
+              "action": "change_type",
+              "score": 0.15,
+              "verdict": "BLOCK"
+            },
+            {
+              "step": 12,
+              "action": "add_edge",
+              "score": 0.15,
+              "verdict": "BLOCK"
+            },
+            {
+              "step": 13,
+              "action": "add_edge",
+              "score": 0.15,
+              "verdict": "BLOCK"
+            },
+            {
+              "step": 14,
+              "action": "change_type",
+              "score": 0.15,
+              "verdict": "BLOCK"
+            },
+            {
+              "step": 15,
+              "action": "change_type",
+              "score": 0.15,
+              "verdict": "BLOCK"
+            },
+            {
+              "step": 16,
+              "action": "remove_edge",
+              "score": 0.15,
+              "verdict": "BLOCK"
+            },
+            {
+              "step": 17,
+              "action": "change_type",
+              "score": 0.2,
+              "verdict": "BLOCK"
+            },
+            {
+              "step": 18,
+              "action": "add_edge",
+              "score": 0.2,
+              "verdict": "BLOCK"
+            },
+            {
+              "step": 19,
+              "action": "add_edge",
+              "score": 0.2,
+              "verdict": "BLOCK"
+            },
+            {
+              "step": 20,
+              "action": "swap_endpoint",
+              "score": 0.15,
+              "verdict": "BLOCK"
+            }
+          ],
+          "best_solution": {
+            "id": "task_005",
+            "edges": []
+          },
+          "best_report": {
+            "task_id": "task_005",
+            "verdict": "ALLOW",
+            "risk": 0.0,
+            "score": 1.0,
+            "dna": "C0 L0 D0 H0",
+            "metrics": {
+              "N": 4,
+              "E": 0,
+              "density": 0.0,
+              "entropy": 0.0,
+              "strict_cycle_nodes": 0,
+              "layer_viol": 0,
+              "deadly_pairs": 0,
+              "strict_count": 0,
+              "feedback_count": 0,
+              "event_count": 0
+            },
+            "antidote": {
+              "feedback_cap_viol": 0,
+              "feedback_quota_viol": 0,
+              "event_cap_viol": 0,
+              "event_core_hits": 0
+            },
+            "violations": {
+              "goal_failed": false
+            }
+          }
+        },
+        {
+          "agent": "random_agent",
+          "task_id": "task_006",
+          "title": "OWN indicates composition (allowed)",
+          "score_initial": 1.0,
+          "verdict_initial": "ALLOW",
+          "score_best": 1.0,
+          "verdict_best": "ALLOW",
+          "risk_best": 0.0,
+          "dna_best": "C0 L0 D0 H2",
+          "goal_failed_best": false,
+          "history": [
+            {
+              "step": 0,
+              "action": "initial",
+              "score": 1.0,
+              "verdict": "ALLOW"
+            },
+            {
+              "step": 1,
+              "action": "add_edge",
+              "score": 0.45,
+              "verdict": "WARN"
+            },
+            {
+              "step": 2,
+              "action": "add_edge",
+              "score": 0.35,
+              "verdict": "WARN"
+            },
+            {
+              "step": 3,
+              "action": "remove_edge",
+              "score": 0.35,
+              "verdict": "WARN"
+            },
+            {
+              "step": 4,
+              "action": "add_edge",
+              "score": 0.35,
+              "verdict": "WARN"
+            },
+            {
+              "step": 5,
+              "action": "change_type",
+              "score": 0.35,
+              "verdict": "WARN"
+            },
+            {
+              "step": 6,
+              "action": "change_type",
+              "score": 0.35,
+              "verdict": "WARN"
+            },
+            {
+              "step": 7,
+              "action": "change_type",
+              "score": 0.35,
+              "verdict": "WARN"
+            },
+            {
+              "step": 8,
+              "action": "change_type",
+              "score": 0.35,
+              "verdict": "WARN"
+            },
+            {
+              "step": 9,
+              "action": "add_edge",
+              "score": 0.15,
+              "verdict": "BLOCK"
+            },
+            {
+              "step": 10,
+              "action": "change_type",
+              "score": 0.35,
+              "verdict": "WARN"
+            },
+            {
+              "step": 11,
+              "action": "add_edge",
+              "score": 0.35,
+              "verdict": "WARN"
+            },
+            {
+              "step": 12,
+              "action": "remove_edge",
+              "score": 0.35,
+              "verdict": "WARN"
+            },
+            {
+              "step": 13,
+              "action": "swap_endpoint",
+              "score": 0.35,
+              "verdict": "WARN"
+            },
+            {
+              "step": 14,
+              "action": "change_type",
+              "score": 0.35,
+              "verdict": "WARN"
+            },
+            {
+              "step": 15,
+              "action": "remove_edge",
+              "score": 0.45,
+              "verdict": "WARN"
+            },
+            {
+              "step": 16,
+              "action": "change_type",
+              "score": 0.2,
+              "verdict": "BLOCK"
+            },
+            {
+              "step": 17,
+              "action": "add_edge",
+              "score": 0.2,
+              "verdict": "BLOCK"
+            },
+            {
+              "step": 18,
+              "action": "add_edge",
+              "score": 0.2,
+              "verdict": "BLOCK"
+            },
+            {
+              "step": 19,
+              "action": "swap_endpoint",
+              "score": 0.15,
+              "verdict": "BLOCK"
+            },
+            {
+              "step": 20,
+              "action": "change_type",
+              "score": 0.15,
+              "verdict": "BLOCK"
+            }
+          ],
+          "best_solution": {
+            "id": "task_006",
+            "edges": [
+              [
+                "UI",
+                "Service",
+                "SYNC_CALL"
+              ],
+              [
+                "Service",
+                "DB",
+                "SYNC_CALL"
+              ]
+            ]
+          },
+          "best_report": {
+            "task_id": "task_006",
+            "verdict": "ALLOW",
+            "risk": 0.0,
+            "score": 1.0,
+            "dna": "C0 L0 D0 H2",
+            "metrics": {
+              "N": 4,
+              "E": 2,
+              "density": 0.167,
+              "entropy": 0.299,
+              "strict_cycle_nodes": 0,
+              "layer_viol": 0,
+              "deadly_pairs": 0,
+              "strict_count": 2,
+              "feedback_count": 0,
+              "event_count": 0
+            },
+            "antidote": {
+              "feedback_cap_viol": 0,
+              "feedback_quota_viol": 0,
+              "event_cap_viol": 0,
+              "event_core_hits": 0
+            },
+            "violations": {
+              "goal_failed": false
+            }
+          }
+        },
+        {
+          "agent": "random_agent",
+          "task_id": "task_007",
+          "title": "Pipeline DAG with EVENT bus",
+          "score_initial": 1.0,
+          "verdict_initial": "ALLOW",
+          "score_best": 1.0,
+          "verdict_best": "ALLOW",
+          "risk_best": 0.0,
+          "dna_best": "C0 L0 D0 H1",
+          "goal_failed_best": false,
+          "history": [
+            {
+              "step": 0,
+              "action": "initial",
+              "score": 1.0,
+              "verdict": "ALLOW"
+            },
+            {
+              "step": 1,
+              "action": "add_edge",
+              "score": 1.0,
+              "verdict": "ALLOW"
+            },
+            {
+              "step": 2,
+              "action": "remove_edge",
+              "score": 1.0,
+              "verdict": "ALLOW"
+            },
+            {
+              "step": 3,
+              "action": "add_edge",
+              "score": 0.45,
+              "verdict": "WARN"
+            },
+            {
+              "step": 4,
+              "action": "remove_edge",
+              "score": 0.45,
+              "verdict": "WARN"
+            },
+            {
+              "step": 5,
+              "action": "add_edge",
+              "score": 0.1,
+              "verdict": "BLOCK"
+            },
+            {
+              "step": 6,
+              "action": "swap_endpoint",
+              "score": 0.45,
+              "verdict": "WARN"
+            },
+            {
+              "step": 7,
+              "action": "add_edge",
+              "score": 0.45,
+              "verdict": "WARN"
+            },
+            {
+              "step": 8,
+              "action": "remove_edge",
+              "score": 0.45,
+              "verdict": "WARN"
+            },
+            {
+              "step": 9,
+              "action": "change_type",
+              "score": 0.45,
+              "verdict": "WARN"
+            },
+            {
+              "step": 10,
+              "action": "change_type",
+              "score": 0.45,
+              "verdict": "WARN"
+            },
+            {
+              "step": 11,
+              "action": "add_edge",
+              "score": 0.45,
+              "verdict": "WARN"
+            },
+            {
+              "step": 12,
+              "action": "swap_endpoint",
+              "score": 0.45,
+              "verdict": "WARN"
+            },
+            {
+              "step": 13,
+              "action": "change_type",
+              "score": 0.45,
+              "verdict": "WARN"
+            },
+            {
+              "step": 14,
+              "action": "add_edge",
+              "score": 0.45,
+              "verdict": "WARN"
+            },
+            {
+              "step": 15,
+              "action": "remove_edge",
+              "score": 1.0,
+              "verdict": "ALLOW"
+            },
+            {
+              "step": 16,
+              "action": "swap_endpoint",
+              "score": 1.0,
+              "verdict": "ALLOW"
+            },
+            {
+              "step": 17,
+              "action": "remove_edge",
+              "score": 1.0,
+              "verdict": "ALLOW"
+            },
+            {
+              "step": 18,
+              "action": "add_edge",
+              "score": 0.45,
+              "verdict": "WARN"
+            },
+            {
+              "step": 19,
+              "action": "remove_edge",
+              "score": 1.0,
+              "verdict": "ALLOW"
+            },
+            {
+              "step": 20,
+              "action": "change_type",
+              "score": 0.2,
+              "verdict": "BLOCK"
+            }
+          ],
+          "best_solution": {
+            "id": "task_007",
+            "edges": [
+              [
+                "UI",
+                "API",
+                "SYNC_CALL"
+              ],
+              [
+                "API",
+                "DB",
+                "SYNC_CALL"
+              ]
+            ]
+          },
+          "best_report": {
+            "task_id": "task_007",
+            "verdict": "ALLOW",
+            "risk": 0.0,
+            "score": 1.0,
+            "dna": "C0 L0 D0 H1",
+            "metrics": {
+              "N": 6,
+              "E": 2,
+              "density": 0.067,
+              "entropy": 0.181,
+              "strict_cycle_nodes": 0,
+              "layer_viol": 0,
+              "deadly_pairs": 0,
+              "strict_count": 2,
+              "feedback_count": 0,
+              "event_count": 0
+            },
+            "antidote": {
+              "feedback_cap_viol": 0,
+              "feedback_quota_viol": 0,
+              "event_cap_viol": 0,
+              "event_core_hits": 0
+            },
+            "violations": {
+              "goal_failed": false
+            }
+          }
+        },
+        {
+          "agent": "random_agent",
+          "task_id": "task_008",
+          "title": "Microservices: gateway/auth/billing + analytics via EVENT",
+          "score_initial": 1.0,
+          "verdict_initial": "ALLOW",
+          "score_best": 1.0,
+          "verdict_best": "ALLOW",
+          "risk_best": 0.0,
+          "dna_best": "C0 L0 D0 H1",
+          "goal_failed_best": false,
+          "history": [
+            {
+              "step": 0,
+              "action": "initial",
+              "score": 1.0,
+              "verdict": "ALLOW"
+            },
+            {
+              "step": 1,
+              "action": "add_edge",
+              "score": 1.0,
+              "verdict": "ALLOW"
+            },
+            {
+              "step": 2,
+              "action": "remove_edge",
+              "score": 1.0,
+              "verdict": "ALLOW"
+            },
+            {
+              "step": 3,
+              "action": "add_edge",
+              "score": 1.0,
+              "verdict": "ALLOW"
+            },
+            {
+              "step": 4,
+              "action": "remove_edge",
+              "score": 1.0,
+              "verdict": "ALLOW"
+            },
+            {
+              "step": 5,
+              "action": "add_edge",
+              "score": 0.2,
+              "verdict": "BLOCK"
+            },
+            {
+              "step": 6,
+              "action": "swap_endpoint",
+              "score": 1.0,
+              "verdict": "ALLOW"
+            },
+            {
+              "step": 7,
+              "action": "add_edge",
+              "score": 1.0,
+              "verdict": "ALLOW"
+            },
+            {
+              "step": 8,
+              "action": "change_type",
+              "score": 1.0,
+              "verdict": "ALLOW"
+            },
+            {
+              "step": 9,
+              "action": "change_type",
+              "score": 1.0,
+              "verdict": "ALLOW"
+            },
+            {
+              "step": 10,
+              "action": "change_type",
+              "score": 1.0,
+              "verdict": "ALLOW"
+            },
+            {
+              "step": 11,
+              "action": "add_edge",
+              "score": 1.0,
+              "verdict": "ALLOW"
+            },
+            {
+              "step": 12,
+              "action": "swap_endpoint",
+              "score": 1.0,
+              "verdict": "ALLOW"
+            },
+            {
+              "step": 13,
+              "action": "change_type",
+              "score": 1.0,
+              "verdict": "ALLOW"
+            },
+            {
+              "step": 14,
+              "action": "add_edge",
+              "score": 1.0,
+              "verdict": "ALLOW"
+            },
+            {
+              "step": 15,
+              "action": "remove_edge",
+              "score": 1.0,
+              "verdict": "ALLOW"
+            },
+            {
+              "step": 16,
+              "action": "swap_endpoint",
+              "score": 1.0,
+              "verdict": "ALLOW"
+            },
+            {
+              "step": 17,
+              "action": "remove_edge",
+              "score": 1.0,
+              "verdict": "ALLOW"
+            },
+            {
+              "step": 18,
+              "action": "add_edge",
+              "score": 1.0,
+              "verdict": "ALLOW"
+            },
+            {
+              "step": 19,
+              "action": "remove_edge",
+              "score": 1.0,
+              "verdict": "ALLOW"
+            },
+            {
+              "step": 20,
+              "action": "change_type",
+              "score": 0.2,
+              "verdict": "BLOCK"
+            }
+          ],
+          "best_solution": {
+            "id": "task_008",
+            "edges": [
+              [
+                "UI",
+                "Gateway",
+                "SYNC_CALL"
+              ],
+              [
+                "Gateway",
+                "DB",
+                "SYNC_CALL"
+              ]
+            ]
+          },
+          "best_report": {
+            "task_id": "task_008",
+            "verdict": "ALLOW",
+            "risk": 0.0,
+            "score": 1.0,
+            "dna": "C0 L0 D0 H1",
+            "metrics": {
+              "N": 7,
+              "E": 2,
+              "density": 0.048,
+              "entropy": 0.145,
+              "strict_cycle_nodes": 0,
+              "layer_viol": 0,
+              "deadly_pairs": 0,
+              "strict_count": 2,
+              "feedback_count": 0,
+              "event_count": 0
+            },
+            "antidote": {
+              "feedback_cap_viol": 0,
+              "feedback_quota_viol": 0,
+              "event_cap_viol": 0,
+              "event_core_hits": 0
+            },
+            "violations": {
+              "goal_failed": false
+            }
+          }
+        },
+        {
+          "agent": "random_agent",
+          "task_id": "task_009_antidote",
+          "title": "Antidote: prevent fake FEEDBACK and deadly pairs",
+          "score_initial": 1.0,
+          "verdict_initial": "ALLOW",
+          "score_best": 1.0,
+          "verdict_best": "ALLOW",
+          "risk_best": 0.0,
+          "dna_best": "C0 L0 D0 H3",
+          "goal_failed_best": false,
+          "history": [
+            {
+              "step": 0,
+              "action": "initial",
+              "score": 1.0,
+              "verdict": "ALLOW"
+            },
+            {
+              "step": 1,
+              "action": "add_edge",
+              "score": 0.15,
+              "verdict": "BLOCK"
+            },
+            {
+              "step": 2,
+              "action": "remove_edge",
+              "score": 1.0,
+              "verdict": "ALLOW"
+            },
+            {
+              "step": 3,
+              "action": "add_edge",
+              "score": 0.15,
+              "verdict": "BLOCK"
+            },
+            {
+              "step": 4,
+              "action": "remove_edge",
+              "score": 0.15,
+              "verdict": "BLOCK"
+            },
+            {
+              "step": 5,
+              "action": "add_edge",
+              "score": 0.03,
+              "verdict": "BLOCK"
+            },
+            {
+              "step": 6,
+              "action": "swap_endpoint",
+              "score": 0.15,
+              "verdict": "BLOCK"
+            },
+            {
+              "step": 7,
+              "action": "add_edge",
+              "score": 0.15,
+              "verdict": "BLOCK"
+            },
+            {
+              "step": 8,
+              "action": "remove_edge",
+              "score": 0.35,
+              "verdict": "WARN"
+            },
+            {
+              "step": 9,
+              "action": "change_type",
+              "score": 0.35,
+              "verdict": "WARN"
+            },
+            {
+              "step": 10,
+              "action": "change_type",
+              "score": 0.35,
+              "verdict": "WARN"
+            },
+            {
+              "step": 11,
+              "action": "add_edge",
+              "score": 0.25,
+              "verdict": "BLOCK"
+            },
+            {
+              "step": 12,
+              "action": "swap_endpoint",
+              "score": 0.15,
+              "verdict": "BLOCK"
+            },
+            {
+              "step": 13,
+              "action": "change_type",
+              "score": 0.25,
+              "verdict": "BLOCK"
+            },
+            {
+              "step": 14,
+              "action": "add_edge",
+              "score": 0.25,
+              "verdict": "BLOCK"
+            },
+            {
+              "step": 15,
+              "action": "remove_edge",
+              "score": 0.35,
+              "verdict": "WARN"
+            },
+            {
+              "step": 16,
+              "action": "swap_endpoint",
+              "score": 0.35,
+              "verdict": "WARN"
+            },
+            {
+              "step": 17,
+              "action": "remove_edge",
+              "score": 0.35,
+              "verdict": "WARN"
+            },
+            {
+              "step": 18,
+              "action": "add_edge",
+              "score": 0.35,
+              "verdict": "WARN"
+            },
+            {
+              "step": 19,
+              "action": "remove_edge",
+              "score": 0.45,
+              "verdict": "WARN"
+            },
+            {
+              "step": 20,
+              "action": "change_type",
+              "score": 0.2,
+              "verdict": "BLOCK"
+            }
+          ],
+          "best_solution": {
+            "id": "task_009_antidote",
+            "edges": [
+              [
+                "UI",
+                "Service",
+                "SYNC_CALL"
+              ],
+              [
+                "Service",
+                "DB",
+                "SYNC_CALL"
+              ]
+            ]
+          },
+          "best_report": {
+            "task_id": "task_009_antidote",
+            "verdict": "ALLOW",
+            "risk": 0.0,
+            "score": 1.0,
+            "dna": "C0 L0 D0 H3",
+            "metrics": {
+              "N": 3,
+              "E": 2,
+              "density": 0.333,
+              "entropy": 0.366,
+              "strict_cycle_nodes": 0,
+              "layer_viol": 0,
+              "deadly_pairs": 0,
+              "strict_count": 2,
+              "feedback_count": 0,
+              "event_count": 0
+            },
+            "antidote": {
+              "feedback_cap_viol": 0,
+              "feedback_quota_viol": 0,
+              "event_cap_viol": 0,
+              "event_core_hits": 0
+            },
+            "violations": {
+              "goal_failed": false
+            }
+          }
+        },
+        {
+          "agent": "random_agent",
+          "task_id": "task_010_feedback_ok",
+          "title": "Antidote: allow FEEDBACK only via capability adapter",
+          "score_initial": 0.04,
+          "verdict_initial": "BLOCK",
+          "score_best": 0.04,
+          "verdict_best": "BLOCK",
+          "risk_best": 0.8,
+          "dna_best": "C0 L0 D0 H2",
+          "goal_failed_best": true,
+          "history": [
+            {
+              "step": 0,
+              "action": "initial",
+              "score": 0.04,
+              "verdict": "BLOCK"
+            },
+            {
+              "step": 1,
+              "action": "add_edge",
+              "score": 0.04,
+              "verdict": "BLOCK"
+            },
+            {
+              "step": 2,
+              "action": "add_edge",
+              "score": 0.04,
+              "verdict": "BLOCK"
+            },
+            {
+              "step": 3,
+              "action": "remove_edge",
+              "score": 0.04,
+              "verdict": "BLOCK"
+            },
+            {
+              "step": 4,
+              "action": "add_edge",
+              "score": 0.04,
+              "verdict": "BLOCK"
+            },
+            {
+              "step": 5,
+              "action": "change_type",
+              "score": 0.04,
+              "verdict": "BLOCK"
+            },
+            {
+              "step": 6,
+              "action": "change_type",
+              "score": 0.04,
+              "verdict": "BLOCK"
+            },
+            {
+              "step": 7,
+              "action": "change_type",
+              "score": 0.04,
+              "verdict": "BLOCK"
+            },
+            {
+              "step": 8,
+              "action": "change_type",
+              "score": 0.04,
+              "verdict": "BLOCK"
+            },
+            {
+              "step": 9,
+              "action": "add_edge",
+              "score": 0.03,
+              "verdict": "BLOCK"
+            },
+            {
+              "step": 10,
+              "action": "change_type",
+              "score": 0.04,
+              "verdict": "BLOCK"
+            },
+            {
+              "step": 11,
+              "action": "add_edge",
+              "score": 0.04,
+              "verdict": "BLOCK"
+            },
+            {
+              "step": 12,
+              "action": "remove_edge",
+              "score": 0.04,
+              "verdict": "BLOCK"
+            },
+            {
+              "step": 13,
+              "action": "swap_endpoint",
+              "score": 0.04,
+              "verdict": "BLOCK"
+            },
+            {
+              "step": 14,
+              "action": "change_type",
+              "score": 0.04,
+              "verdict": "BLOCK"
+            },
+            {
+              "step": 15,
+              "action": "remove_edge",
+              "score": 0.04,
+              "verdict": "BLOCK"
+            },
+            {
+              "step": 16,
+              "action": "change_type",
+              "score": 0.04,
+              "verdict": "BLOCK"
+            },
+            {
+              "step": 17,
+              "action": "add_edge",
+              "score": 0.04,
+              "verdict": "BLOCK"
+            },
+            {
+              "step": 18,
+              "action": "add_edge",
+              "score": 0.04,
+              "verdict": "BLOCK"
+            },
+            {
+              "step": 19,
+              "action": "swap_endpoint",
+              "score": 0.03,
+              "verdict": "BLOCK"
+            },
+            {
+              "step": 20,
+              "action": "change_type",
+              "score": 0.03,
+              "verdict": "BLOCK"
+            }
+          ],
+          "best_solution": {
+            "id": "task_010_feedback_ok",
+            "edges": [
+              [
+                "UI",
+                "Service",
+                "SYNC_CALL"
+              ],
+              [
+                "Service",
+                "DB",
+                "SYNC_CALL"
+              ]
+            ]
+          },
+          "best_report": {
+            "task_id": "task_010_feedback_ok",
+            "verdict": "BLOCK",
+            "risk": 0.8,
+            "score": 0.04,
+            "dna": "C0 L0 D0 H2",
+            "metrics": {
+              "N": 4,
+              "E": 2,
+              "density": 0.167,
+              "entropy": 0.299,
+              "strict_cycle_nodes": 0,
+              "layer_viol": 0,
+              "deadly_pairs": 0,
+              "strict_count": 2,
+              "feedback_count": 0,
+              "event_count": 0
+            },
+            "antidote": {
+              "feedback_cap_viol": 0,
+              "feedback_quota_viol": 0,
+              "event_cap_viol": 0,
+              "event_core_hits": 0
+            },
+            "violations": {
+              "goal_failed": true
+            }
+          }
+        }
+      ]
+    },
+    "greedy_agent": {
+      "summary": {
+        "tasks": 10,
+        "pass_at_1": 0.9,
+        "pass_at_3": 0.9,
+        "pass_at_6": 0.9,
+        "mean_initial_score": 0.808,
+        "mean_best_score": 0.92,
+        "repair_gain_mean": 0.112,
+        "block_escape_rate": 0.5,
+        "goal_satisfaction_rate": 1.0,
+        "hard_failures": [
+          "task_010_feedback_ok"
+        ]
+      },
+      "items": [
+        {
+          "agent": "greedy_agent",
+          "task_id": "task_001",
+          "title": "Add cache without breaking layers",
+          "score_initial": 0.04,
+          "verdict_initial": "BLOCK",
+          "score_best": 1.0,
+          "verdict_best": "ALLOW",
+          "risk_best": 0.0,
+          "dna_best": "C0 L0 D0 H3",
+          "goal_failed_best": false,
+          "history": [
+            {
+              "step": 0,
+              "action": "initial",
+              "score": 0.04,
+              "verdict": "BLOCK"
+            },
+            {
+              "step": 1,
+              "action": "add_required_edges added=1",
+              "score": 1.0,
+              "verdict": "ALLOW"
+            }
+          ],
+          "best_solution": {
+            "id": "task_001",
+            "edges": [
+              [
+                "UI",
+                "Service",
+                "SYNC_CALL"
+              ],
+              [
+                "Service",
+                "DB",
+                "SYNC_CALL"
+              ],
+              [
+                "Service",
+                "Cache",
+                "DATA"
+              ]
+            ]
+          },
+          "best_report": {
+            "task_id": "task_001",
+            "verdict": "ALLOW",
+            "risk": 0.0,
+            "score": 1.0,
+            "dna": "C0 L0 D0 H3",
+            "metrics": {
+              "N": 4,
+              "E": 3,
+              "density": 0.25,
+              "entropy": 0.347,
+              "strict_cycle_nodes": 0,
+              "layer_viol": 0,
+              "deadly_pairs": 0,
+              "strict_count": 3,
+              "feedback_count": 0,
+              "event_count": 0
+            },
+            "antidote": {
+              "feedback_cap_viol": 0,
+              "feedback_quota_viol": 0,
+              "event_cap_viol": 0,
+              "event_core_hits": 0
+            },
+            "violations": {
+              "goal_failed": false
+            }
+          }
+        },
+        {
+          "agent": "greedy_agent",
+          "task_id": "task_002",
+          "title": "Dependency cycle must be BLOCK",
+          "score_initial": 1.0,
+          "verdict_initial": "ALLOW",
+          "score_best": 1.0,
+          "verdict_best": "ALLOW",
+          "risk_best": 0.0,
+          "dna_best": "C0 L0 D0 H0",
+          "goal_failed_best": false,
+          "history": [
+            {
+              "step": 0,
+              "action": "initial",
+              "score": 1.0,
+              "verdict": "ALLOW"
+            },
+            {
+              "step": 1,
+              "action": "remove_forbidden_edges removed=0",
+              "score": 1.0,
+              "verdict": "ALLOW"
+            }
+          ],
+          "best_solution": {
+            "id": "task_002",
+            "edges": []
+          },
+          "best_report": {
+            "task_id": "task_002",
+            "verdict": "ALLOW",
+            "risk": 0.0,
+            "score": 1.0,
+            "dna": "C0 L0 D0 H0",
+            "metrics": {
+              "N": 2,
+              "E": 0,
+              "density": 0.0,
+              "entropy": 0.0,
+              "strict_cycle_nodes": 0,
+              "layer_viol": 0,
+              "deadly_pairs": 0,
+              "strict_count": 0,
+              "feedback_count": 0,
+              "event_count": 0
+            },
+            "antidote": {
+              "feedback_cap_viol": 0,
+              "feedback_quota_viol": 0,
+              "event_cap_viol": 0,
+              "event_core_hits": 0
+            },
+            "violations": {
+              "goal_failed": false
+            }
+          }
+        },
+        {
+          "agent": "greedy_agent",
+          "task_id": "task_003",
+          "title": "Touch the core: EVENT is OK, SYNC is not",
+          "score_initial": 1.0,
+          "verdict_initial": "ALLOW",
+          "score_best": 1.0,
+          "verdict_best": "ALLOW",
+          "risk_best": 0.0,
+          "dna_best": "C0 L0 D0 H3",
+          "goal_failed_best": false,
+          "history": [
+            {
+              "step": 0,
+              "action": "initial",
+              "score": 1.0,
+              "verdict": "ALLOW"
+            },
+            {
+              "step": 1,
+              "action": "remove_forbidden_edges removed=0",
+              "score": 1.0,
+              "verdict": "ALLOW"
+            }
+          ],
+          "best_solution": {
+            "id": "task_003",
+            "edges": [
+              [
+                "UI",
+                "Service",
+                "SYNC_CALL"
+              ],
+              [
+                "Service",
+                "DB",
+                "SYNC_CALL"
+              ]
+            ]
+          },
+          "best_report": {
+            "task_id": "task_003",
+            "verdict": "ALLOW",
+            "risk": 0.0,
+            "score": 1.0,
+            "dna": "C0 L0 D0 H3",
+            "metrics": {
+              "N": 3,
+              "E": 2,
+              "density": 0.333,
+              "entropy": 0.366,
+              "strict_cycle_nodes": 0,
+              "layer_viol": 0,
+              "deadly_pairs": 0,
+              "strict_count": 2,
+              "feedback_count": 0,
+              "event_count": 0
+            },
+            "antidote": {
+              "feedback_cap_viol": 0,
+              "feedback_quota_viol": 0,
+              "event_cap_viol": 0,
+              "event_core_hits": 0
+            },
+            "violations": {
+              "goal_failed": false
+            }
+          }
+        },
+        {
+          "agent": "greedy_agent",
+          "task_id": "task_004",
+          "title": "FEEDBACK upward is legal control channel",
+          "score_initial": 1.0,
+          "verdict_initial": "ALLOW",
+          "score_best": 1.0,
+          "verdict_best": "ALLOW",
+          "risk_best": 0.0,
+          "dna_best": "C0 L0 D0 H3",
+          "goal_failed_best": false,
+          "history": [
+            {
+              "step": 0,
+              "action": "initial",
+              "score": 1.0,
+              "verdict": "ALLOW"
+            },
+            {
+              "step": 1,
+              "action": "remove_forbidden_edges removed=0",
+              "score": 1.0,
+              "verdict": "ALLOW"
+            }
+          ],
+          "best_solution": {
+            "id": "task_004",
+            "edges": [
+              [
+                "UI",
+                "Service",
+                "SYNC_CALL"
+              ],
+              [
+                "Service",
+                "DB",
+                "SYNC_CALL"
+              ]
+            ]
+          },
+          "best_report": {
+            "task_id": "task_004",
+            "verdict": "ALLOW",
+            "risk": 0.0,
+            "score": 1.0,
+            "dna": "C0 L0 D0 H3",
+            "metrics": {
+              "N": 3,
+              "E": 2,
+              "density": 0.333,
+              "entropy": 0.366,
+              "strict_cycle_nodes": 0,
+              "layer_viol": 0,
+              "deadly_pairs": 0,
+              "strict_count": 2,
+              "feedback_count": 0,
+              "event_count": 0
+            },
+            "antidote": {
+              "feedback_cap_viol": 0,
+              "feedback_quota_viol": 0,
+              "event_cap_viol": 0,
+              "event_core_hits": 0
+            },
+            "violations": {
+              "goal_failed": false
+            }
+          }
+        },
+        {
+          "agent": "greedy_agent",
+          "task_id": "task_005",
+          "title": "Dense mesh should hurt (density overload)",
+          "score_initial": 1.0,
+          "verdict_initial": "ALLOW",
+          "score_best": 1.0,
+          "verdict_best": "ALLOW",
+          "risk_best": 0.0,
+          "dna_best": "C0 L0 D0 H0",
+          "goal_failed_best": false,
+          "history": [
+            {
+              "step": 0,
+              "action": "initial",
+              "score": 1.0,
+              "verdict": "ALLOW"
+            },
+            {
+              "step": 1,
+              "action": "remove_forbidden_edges removed=0",
+              "score": 1.0,
+              "verdict": "ALLOW"
+            }
+          ],
+          "best_solution": {
+            "id": "task_005",
+            "edges": []
+          },
+          "best_report": {
+            "task_id": "task_005",
+            "verdict": "ALLOW",
+            "risk": 0.0,
+            "score": 1.0,
+            "dna": "C0 L0 D0 H0",
+            "metrics": {
+              "N": 4,
+              "E": 0,
+              "density": 0.0,
+              "entropy": 0.0,
+              "strict_cycle_nodes": 0,
+              "layer_viol": 0,
+              "deadly_pairs": 0,
+              "strict_count": 0,
+              "feedback_count": 0,
+              "event_count": 0
+            },
+            "antidote": {
+              "feedback_cap_viol": 0,
+              "feedback_quota_viol": 0,
+              "event_cap_viol": 0,
+              "event_core_hits": 0
+            },
+            "violations": {
+              "goal_failed": false
+            }
+          }
+        },
+        {
+          "agent": "greedy_agent",
+          "task_id": "task_006",
+          "title": "OWN indicates composition (allowed)",
+          "score_initial": 1.0,
+          "verdict_initial": "ALLOW",
+          "score_best": 1.0,
+          "verdict_best": "ALLOW",
+          "risk_best": 0.0,
+          "dna_best": "C0 L0 D0 H2",
+          "goal_failed_best": false,
+          "history": [
+            {
+              "step": 0,
+              "action": "initial",
+              "score": 1.0,
+              "verdict": "ALLOW"
+            },
+            {
+              "step": 1,
+              "action": "remove_forbidden_edges removed=0",
+              "score": 1.0,
+              "verdict": "ALLOW"
+            }
+          ],
+          "best_solution": {
+            "id": "task_006",
+            "edges": [
+              [
+                "UI",
+                "Service",
+                "SYNC_CALL"
+              ],
+              [
+                "Service",
+                "DB",
+                "SYNC_CALL"
+              ]
+            ]
+          },
+          "best_report": {
+            "task_id": "task_006",
+            "verdict": "ALLOW",
+            "risk": 0.0,
+            "score": 1.0,
+            "dna": "C0 L0 D0 H2",
+            "metrics": {
+              "N": 4,
+              "E": 2,
+              "density": 0.167,
+              "entropy": 0.299,
+              "strict_cycle_nodes": 0,
+              "layer_viol": 0,
+              "deadly_pairs": 0,
+              "strict_count": 2,
+              "feedback_count": 0,
+              "event_count": 0
+            },
+            "antidote": {
+              "feedback_cap_viol": 0,
+              "feedback_quota_viol": 0,
+              "event_cap_viol": 0,
+              "event_core_hits": 0
+            },
+            "violations": {
+              "goal_failed": false
+            }
+          }
+        },
+        {
+          "agent": "greedy_agent",
+          "task_id": "task_007",
+          "title": "Pipeline DAG with EVENT bus",
+          "score_initial": 1.0,
+          "verdict_initial": "ALLOW",
+          "score_best": 1.0,
+          "verdict_best": "ALLOW",
+          "risk_best": 0.0,
+          "dna_best": "C0 L0 D0 H1",
+          "goal_failed_best": false,
+          "history": [
+            {
+              "step": 0,
+              "action": "initial",
+              "score": 1.0,
+              "verdict": "ALLOW"
+            },
+            {
+              "step": 1,
+              "action": "remove_forbidden_edges removed=0",
+              "score": 1.0,
+              "verdict": "ALLOW"
+            }
+          ],
+          "best_solution": {
+            "id": "task_007",
+            "edges": [
+              [
+                "UI",
+                "API",
+                "SYNC_CALL"
+              ],
+              [
+                "API",
+                "DB",
+                "SYNC_CALL"
+              ]
+            ]
+          },
+          "best_report": {
+            "task_id": "task_007",
+            "verdict": "ALLOW",
+            "risk": 0.0,
+            "score": 1.0,
+            "dna": "C0 L0 D0 H1",
+            "metrics": {
+              "N": 6,
+              "E": 2,
+              "density": 0.067,
+              "entropy": 0.181,
+              "strict_cycle_nodes": 0,
+              "layer_viol": 0,
+              "deadly_pairs": 0,
+              "strict_count": 2,
+              "feedback_count": 0,
+              "event_count": 0
+            },
+            "antidote": {
+              "feedback_cap_viol": 0,
+              "feedback_quota_viol": 0,
+              "event_cap_viol": 0,
+              "event_core_hits": 0
+            },
+            "violations": {
+              "goal_failed": false
+            }
+          }
+        },
+        {
+          "agent": "greedy_agent",
+          "task_id": "task_008",
+          "title": "Microservices: gateway/auth/billing + analytics via EVENT",
+          "score_initial": 1.0,
+          "verdict_initial": "ALLOW",
+          "score_best": 1.0,
+          "verdict_best": "ALLOW",
+          "risk_best": 0.0,
+          "dna_best": "C0 L0 D0 H1",
+          "goal_failed_best": false,
+          "history": [
+            {
+              "step": 0,
+              "action": "initial",
+              "score": 1.0,
+              "verdict": "ALLOW"
+            },
+            {
+              "step": 1,
+              "action": "remove_forbidden_edges removed=0",
+              "score": 1.0,
+              "verdict": "ALLOW"
+            }
+          ],
+          "best_solution": {
+            "id": "task_008",
+            "edges": [
+              [
+                "UI",
+                "Gateway",
+                "SYNC_CALL"
+              ],
+              [
+                "Gateway",
+                "DB",
+                "SYNC_CALL"
+              ]
+            ]
+          },
+          "best_report": {
+            "task_id": "task_008",
+            "verdict": "ALLOW",
+            "risk": 0.0,
+            "score": 1.0,
+            "dna": "C0 L0 D0 H1",
+            "metrics": {
+              "N": 7,
+              "E": 2,
+              "density": 0.048,
+              "entropy": 0.145,
+              "strict_cycle_nodes": 0,
+              "layer_viol": 0,
+              "deadly_pairs": 0,
+              "strict_count": 2,
+              "feedback_count": 0,
+              "event_count": 0
+            },
+            "antidote": {
+              "feedback_cap_viol": 0,
+              "feedback_quota_viol": 0,
+              "event_cap_viol": 0,
+              "event_core_hits": 0
+            },
+            "violations": {
+              "goal_failed": false
+            }
+          }
+        },
+        {
+          "agent": "greedy_agent",
+          "task_id": "task_009_antidote",
+          "title": "Antidote: prevent fake FEEDBACK and deadly pairs",
+          "score_initial": 1.0,
+          "verdict_initial": "ALLOW",
+          "score_best": 1.0,
+          "verdict_best": "ALLOW",
+          "risk_best": 0.0,
+          "dna_best": "C0 L0 D0 H3",
+          "goal_failed_best": false,
+          "history": [
+            {
+              "step": 0,
+              "action": "initial",
+              "score": 1.0,
+              "verdict": "ALLOW"
+            },
+            {
+              "step": 1,
+              "action": "remove_forbidden_edges removed=0",
+              "score": 1.0,
+              "verdict": "ALLOW"
+            }
+          ],
+          "best_solution": {
+            "id": "task_009_antidote",
+            "edges": [
+              [
+                "UI",
+                "Service",
+                "SYNC_CALL"
+              ],
+              [
+                "Service",
+                "DB",
+                "SYNC_CALL"
+              ]
+            ]
+          },
+          "best_report": {
+            "task_id": "task_009_antidote",
+            "verdict": "ALLOW",
+            "risk": 0.0,
+            "score": 1.0,
+            "dna": "C0 L0 D0 H3",
+            "metrics": {
+              "N": 3,
+              "E": 2,
+              "density": 0.333,
+              "entropy": 0.366,
+              "strict_cycle_nodes": 0,
+              "layer_viol": 0,
+              "deadly_pairs": 0,
+              "strict_count": 2,
+              "feedback_count": 0,
+              "event_count": 0
+            },
+            "antidote": {
+              "feedback_cap_viol": 0,
+              "feedback_quota_viol": 0,
+              "event_cap_viol": 0,
+              "event_core_hits": 0
+            },
+            "violations": {
+              "goal_failed": false
+            }
+          }
+        },
+        {
+          "agent": "greedy_agent",
+          "task_id": "task_010_feedback_ok",
+          "title": "Antidote: allow FEEDBACK only via capability adapter",
+          "score_initial": 0.04,
+          "verdict_initial": "BLOCK",
+          "score_best": 0.2,
+          "verdict_best": "BLOCK",
+          "risk_best": 0.8,
+          "dna_best": "C0 L0 D0 H3",
+          "goal_failed_best": false,
+          "history": [
+            {
+              "step": 0,
+              "action": "initial",
+              "score": 0.04,
+              "verdict": "BLOCK"
+            },
+            {
+              "step": 1,
+              "action": "add_required_edges added=1",
+              "score": 0.2,
+              "verdict": "BLOCK"
+            },
+            {
+              "step": 2,
+              "action": "remove_forbidden_edges removed=0",
+              "score": 0.2,
+              "verdict": "BLOCK"
+            }
+          ],
+          "best_solution": {
+            "id": "task_010_feedback_ok",
+            "edges": [
+              [
+                "UI",
+                "Service",
+                "SYNC_CALL"
+              ],
+              [
+                "Service",
+                "DB",
+                "SYNC_CALL"
+              ],
+              [
+                "Observer",
+                "UI",
+                "FEEDBACK"
+              ]
+            ]
+          },
+          "best_report": {
+            "task_id": "task_010_feedback_ok",
+            "verdict": "BLOCK",
+            "risk": 0.8,
+            "score": 0.2,
+            "dna": "C0 L0 D0 H3",
+            "metrics": {
+              "N": 4,
+              "E": 3,
+              "density": 0.25,
+              "entropy": 0.347,
+              "strict_cycle_nodes": 0,
+              "layer_viol": 0,
+              "deadly_pairs": 0,
+              "strict_count": 2,
+              "feedback_count": 1,
+              "event_count": 0
+            },
+            "antidote": {
+              "feedback_cap_viol": 1,
+              "feedback_quota_viol": 0,
+              "event_cap_viol": 0,
+              "event_core_hits": 0
+            },
+            "violations": {
+              "goal_failed": false
+            }
+          }
+        }
+      ]
+    },
+    "rule_based_agent": {
+      "summary": {
+        "tasks": 10,
+        "pass_at_1": 0.9,
+        "pass_at_3": 0.9,
+        "pass_at_6": 0.9,
+        "mean_initial_score": 0.808,
+        "mean_best_score": 0.92,
+        "repair_gain_mean": 0.112,
+        "block_escape_rate": 0.5,
+        "goal_satisfaction_rate": 1.0,
+        "hard_failures": [
+          "task_010_feedback_ok"
+        ]
+      },
+      "items": [
+        {
+          "agent": "rule_based_agent",
+          "task_id": "task_001",
+          "title": "Add cache without breaking layers",
+          "score_initial": 0.04,
+          "verdict_initial": "BLOCK",
+          "score_best": 1.0,
+          "verdict_best": "ALLOW",
+          "risk_best": 0.0,
+          "dna_best": "C0 L0 D0 H3",
+          "goal_failed_best": false,
+          "history": [
+            {
+              "step": 0,
+              "action": "initial",
+              "score": 0.04,
+              "verdict": "BLOCK"
+            },
+            {
+              "step": 1,
+              "action": "add_required_edges changed=1",
+              "score": 1.0,
+              "verdict": "ALLOW"
+            }
+          ],
+          "best_solution": {
+            "id": "task_001",
+            "edges": [
+              [
+                "UI",
+                "Service",
+                "SYNC_CALL"
+              ],
+              [
+                "Service",
+                "DB",
+                "SYNC_CALL"
+              ],
+              [
+                "Service",
+                "Cache",
+                "DATA"
+              ]
+            ]
+          },
+          "best_report": {
+            "task_id": "task_001",
+            "verdict": "ALLOW",
+            "risk": 0.0,
+            "score": 1.0,
+            "dna": "C0 L0 D0 H3",
+            "metrics": {
+              "N": 4,
+              "E": 3,
+              "density": 0.25,
+              "entropy": 0.347,
+              "strict_cycle_nodes": 0,
+              "layer_viol": 0,
+              "deadly_pairs": 0,
+              "strict_count": 3,
+              "feedback_count": 0,
+              "event_count": 0
+            },
+            "antidote": {
+              "feedback_cap_viol": 0,
+              "feedback_quota_viol": 0,
+              "event_cap_viol": 0,
+              "event_core_hits": 0
+            },
+            "violations": {
+              "goal_failed": false
+            }
+          }
+        },
+        {
+          "agent": "rule_based_agent",
+          "task_id": "task_002",
+          "title": "Dependency cycle must be BLOCK",
+          "score_initial": 1.0,
+          "verdict_initial": "ALLOW",
+          "score_best": 1.0,
+          "verdict_best": "ALLOW",
+          "risk_best": 0.0,
+          "dna_best": "C0 L0 D0 H0",
+          "goal_failed_best": false,
+          "history": [
+            {
+              "step": 0,
+              "action": "initial",
+              "score": 1.0,
+              "verdict": "ALLOW"
+            }
+          ],
+          "best_solution": {
+            "id": "task_002",
+            "edges": []
+          },
+          "best_report": {
+            "task_id": "task_002",
+            "verdict": "ALLOW",
+            "risk": 0.0,
+            "score": 1.0,
+            "dna": "C0 L0 D0 H0",
+            "metrics": {
+              "N": 2,
+              "E": 0,
+              "density": 0.0,
+              "entropy": 0.0,
+              "strict_cycle_nodes": 0,
+              "layer_viol": 0,
+              "deadly_pairs": 0,
+              "strict_count": 0,
+              "feedback_count": 0,
+              "event_count": 0
+            },
+            "antidote": {
+              "feedback_cap_viol": 0,
+              "feedback_quota_viol": 0,
+              "event_cap_viol": 0,
+              "event_core_hits": 0
+            },
+            "violations": {
+              "goal_failed": false
+            }
+          }
+        },
+        {
+          "agent": "rule_based_agent",
+          "task_id": "task_003",
+          "title": "Touch the core: EVENT is OK, SYNC is not",
+          "score_initial": 1.0,
+          "verdict_initial": "ALLOW",
+          "score_best": 1.0,
+          "verdict_best": "ALLOW",
+          "risk_best": 0.0,
+          "dna_best": "C0 L0 D0 H3",
+          "goal_failed_best": false,
+          "history": [
+            {
+              "step": 0,
+              "action": "initial",
+              "score": 1.0,
+              "verdict": "ALLOW"
+            }
+          ],
+          "best_solution": {
+            "id": "task_003",
+            "edges": [
+              [
+                "UI",
+                "Service",
+                "SYNC_CALL"
+              ],
+              [
+                "Service",
+                "DB",
+                "SYNC_CALL"
+              ]
+            ]
+          },
+          "best_report": {
+            "task_id": "task_003",
+            "verdict": "ALLOW",
+            "risk": 0.0,
+            "score": 1.0,
+            "dna": "C0 L0 D0 H3",
+            "metrics": {
+              "N": 3,
+              "E": 2,
+              "density": 0.333,
+              "entropy": 0.366,
+              "strict_cycle_nodes": 0,
+              "layer_viol": 0,
+              "deadly_pairs": 0,
+              "strict_count": 2,
+              "feedback_count": 0,
+              "event_count": 0
+            },
+            "antidote": {
+              "feedback_cap_viol": 0,
+              "feedback_quota_viol": 0,
+              "event_cap_viol": 0,
+              "event_core_hits": 0
+            },
+            "violations": {
+              "goal_failed": false
+            }
+          }
+        },
+        {
+          "agent": "rule_based_agent",
+          "task_id": "task_004",
+          "title": "FEEDBACK upward is legal control channel",
+          "score_initial": 1.0,
+          "verdict_initial": "ALLOW",
+          "score_best": 1.0,
+          "verdict_best": "ALLOW",
+          "risk_best": 0.0,
+          "dna_best": "C0 L0 D0 H3",
+          "goal_failed_best": false,
+          "history": [
+            {
+              "step": 0,
+              "action": "initial",
+              "score": 1.0,
+              "verdict": "ALLOW"
+            }
+          ],
+          "best_solution": {
+            "id": "task_004",
+            "edges": [
+              [
+                "UI",
+                "Service",
+                "SYNC_CALL"
+              ],
+              [
+                "Service",
+                "DB",
+                "SYNC_CALL"
+              ]
+            ]
+          },
+          "best_report": {
+            "task_id": "task_004",
+            "verdict": "ALLOW",
+            "risk": 0.0,
+            "score": 1.0,
+            "dna": "C0 L0 D0 H3",
+            "metrics": {
+              "N": 3,
+              "E": 2,
+              "density": 0.333,
+              "entropy": 0.366,
+              "strict_cycle_nodes": 0,
+              "layer_viol": 0,
+              "deadly_pairs": 0,
+              "strict_count": 2,
+              "feedback_count": 0,
+              "event_count": 0
+            },
+            "antidote": {
+              "feedback_cap_viol": 0,
+              "feedback_quota_viol": 0,
+              "event_cap_viol": 0,
+              "event_core_hits": 0
+            },
+            "violations": {
+              "goal_failed": false
+            }
+          }
+        },
+        {
+          "agent": "rule_based_agent",
+          "task_id": "task_005",
+          "title": "Dense mesh should hurt (density overload)",
+          "score_initial": 1.0,
+          "verdict_initial": "ALLOW",
+          "score_best": 1.0,
+          "verdict_best": "ALLOW",
+          "risk_best": 0.0,
+          "dna_best": "C0 L0 D0 H0",
+          "goal_failed_best": false,
+          "history": [
+            {
+              "step": 0,
+              "action": "initial",
+              "score": 1.0,
+              "verdict": "ALLOW"
+            }
+          ],
+          "best_solution": {
+            "id": "task_005",
+            "edges": []
+          },
+          "best_report": {
+            "task_id": "task_005",
+            "verdict": "ALLOW",
+            "risk": 0.0,
+            "score": 1.0,
+            "dna": "C0 L0 D0 H0",
+            "metrics": {
+              "N": 4,
+              "E": 0,
+              "density": 0.0,
+              "entropy": 0.0,
+              "strict_cycle_nodes": 0,
+              "layer_viol": 0,
+              "deadly_pairs": 0,
+              "strict_count": 0,
+              "feedback_count": 0,
+              "event_count": 0
+            },
+            "antidote": {
+              "feedback_cap_viol": 0,
+              "feedback_quota_viol": 0,
+              "event_cap_viol": 0,
+              "event_core_hits": 0
+            },
+            "violations": {
+              "goal_failed": false
+            }
+          }
+        },
+        {
+          "agent": "rule_based_agent",
+          "task_id": "task_006",
+          "title": "OWN indicates composition (allowed)",
+          "score_initial": 1.0,
+          "verdict_initial": "ALLOW",
+          "score_best": 1.0,
+          "verdict_best": "ALLOW",
+          "risk_best": 0.0,
+          "dna_best": "C0 L0 D0 H2",
+          "goal_failed_best": false,
+          "history": [
+            {
+              "step": 0,
+              "action": "initial",
+              "score": 1.0,
+              "verdict": "ALLOW"
+            }
+          ],
+          "best_solution": {
+            "id": "task_006",
+            "edges": [
+              [
+                "UI",
+                "Service",
+                "SYNC_CALL"
+              ],
+              [
+                "Service",
+                "DB",
+                "SYNC_CALL"
+              ]
+            ]
+          },
+          "best_report": {
+            "task_id": "task_006",
+            "verdict": "ALLOW",
+            "risk": 0.0,
+            "score": 1.0,
+            "dna": "C0 L0 D0 H2",
+            "metrics": {
+              "N": 4,
+              "E": 2,
+              "density": 0.167,
+              "entropy": 0.299,
+              "strict_cycle_nodes": 0,
+              "layer_viol": 0,
+              "deadly_pairs": 0,
+              "strict_count": 2,
+              "feedback_count": 0,
+              "event_count": 0
+            },
+            "antidote": {
+              "feedback_cap_viol": 0,
+              "feedback_quota_viol": 0,
+              "event_cap_viol": 0,
+              "event_core_hits": 0
+            },
+            "violations": {
+              "goal_failed": false
+            }
+          }
+        },
+        {
+          "agent": "rule_based_agent",
+          "task_id": "task_007",
+          "title": "Pipeline DAG with EVENT bus",
+          "score_initial": 1.0,
+          "verdict_initial": "ALLOW",
+          "score_best": 1.0,
+          "verdict_best": "ALLOW",
+          "risk_best": 0.0,
+          "dna_best": "C0 L0 D0 H1",
+          "goal_failed_best": false,
+          "history": [
+            {
+              "step": 0,
+              "action": "initial",
+              "score": 1.0,
+              "verdict": "ALLOW"
+            }
+          ],
+          "best_solution": {
+            "id": "task_007",
+            "edges": [
+              [
+                "UI",
+                "API",
+                "SYNC_CALL"
+              ],
+              [
+                "API",
+                "DB",
+                "SYNC_CALL"
+              ]
+            ]
+          },
+          "best_report": {
+            "task_id": "task_007",
+            "verdict": "ALLOW",
+            "risk": 0.0,
+            "score": 1.0,
+            "dna": "C0 L0 D0 H1",
+            "metrics": {
+              "N": 6,
+              "E": 2,
+              "density": 0.067,
+              "entropy": 0.181,
+              "strict_cycle_nodes": 0,
+              "layer_viol": 0,
+              "deadly_pairs": 0,
+              "strict_count": 2,
+              "feedback_count": 0,
+              "event_count": 0
+            },
+            "antidote": {
+              "feedback_cap_viol": 0,
+              "feedback_quota_viol": 0,
+              "event_cap_viol": 0,
+              "event_core_hits": 0
+            },
+            "violations": {
+              "goal_failed": false
+            }
+          }
+        },
+        {
+          "agent": "rule_based_agent",
+          "task_id": "task_008",
+          "title": "Microservices: gateway/auth/billing + analytics via EVENT",
+          "score_initial": 1.0,
+          "verdict_initial": "ALLOW",
+          "score_best": 1.0,
+          "verdict_best": "ALLOW",
+          "risk_best": 0.0,
+          "dna_best": "C0 L0 D0 H1",
+          "goal_failed_best": false,
+          "history": [
+            {
+              "step": 0,
+              "action": "initial",
+              "score": 1.0,
+              "verdict": "ALLOW"
+            }
+          ],
+          "best_solution": {
+            "id": "task_008",
+            "edges": [
+              [
+                "UI",
+                "Gateway",
+                "SYNC_CALL"
+              ],
+              [
+                "Gateway",
+                "DB",
+                "SYNC_CALL"
+              ]
+            ]
+          },
+          "best_report": {
+            "task_id": "task_008",
+            "verdict": "ALLOW",
+            "risk": 0.0,
+            "score": 1.0,
+            "dna": "C0 L0 D0 H1",
+            "metrics": {
+              "N": 7,
+              "E": 2,
+              "density": 0.048,
+              "entropy": 0.145,
+              "strict_cycle_nodes": 0,
+              "layer_viol": 0,
+              "deadly_pairs": 0,
+              "strict_count": 2,
+              "feedback_count": 0,
+              "event_count": 0
+            },
+            "antidote": {
+              "feedback_cap_viol": 0,
+              "feedback_quota_viol": 0,
+              "event_cap_viol": 0,
+              "event_core_hits": 0
+            },
+            "violations": {
+              "goal_failed": false
+            }
+          }
+        },
+        {
+          "agent": "rule_based_agent",
+          "task_id": "task_009_antidote",
+          "title": "Antidote: prevent fake FEEDBACK and deadly pairs",
+          "score_initial": 1.0,
+          "verdict_initial": "ALLOW",
+          "score_best": 1.0,
+          "verdict_best": "ALLOW",
+          "risk_best": 0.0,
+          "dna_best": "C0 L0 D0 H3",
+          "goal_failed_best": false,
+          "history": [
+            {
+              "step": 0,
+              "action": "initial",
+              "score": 1.0,
+              "verdict": "ALLOW"
+            }
+          ],
+          "best_solution": {
+            "id": "task_009_antidote",
+            "edges": [
+              [
+                "UI",
+                "Service",
+                "SYNC_CALL"
+              ],
+              [
+                "Service",
+                "DB",
+                "SYNC_CALL"
+              ]
+            ]
+          },
+          "best_report": {
+            "task_id": "task_009_antidote",
+            "verdict": "ALLOW",
+            "risk": 0.0,
+            "score": 1.0,
+            "dna": "C0 L0 D0 H3",
+            "metrics": {
+              "N": 3,
+              "E": 2,
+              "density": 0.333,
+              "entropy": 0.366,
+              "strict_cycle_nodes": 0,
+              "layer_viol": 0,
+              "deadly_pairs": 0,
+              "strict_count": 2,
+              "feedback_count": 0,
+              "event_count": 0
+            },
+            "antidote": {
+              "feedback_cap_viol": 0,
+              "feedback_quota_viol": 0,
+              "event_cap_viol": 0,
+              "event_core_hits": 0
+            },
+            "violations": {
+              "goal_failed": false
+            }
+          }
+        },
+        {
+          "agent": "rule_based_agent",
+          "task_id": "task_010_feedback_ok",
+          "title": "Antidote: allow FEEDBACK only via capability adapter",
+          "score_initial": 0.04,
+          "verdict_initial": "BLOCK",
+          "score_best": 0.2,
+          "verdict_best": "BLOCK",
+          "risk_best": 0.8,
+          "dna_best": "C0 L0 D0 H3",
+          "goal_failed_best": false,
+          "history": [
+            {
+              "step": 0,
+              "action": "initial",
+              "score": 0.04,
+              "verdict": "BLOCK"
+            },
+            {
+              "step": 1,
+              "action": "add_required_edges changed=1",
+              "score": 0.2,
+              "verdict": "BLOCK"
+            },
+            {
+              "step": 2,
+              "action": "trim_feedback_without_capability changed=1",
+              "score": 0.04,
+              "verdict": "BLOCK"
+            },
+            {
+              "step": 3,
+              "action": "add_required_edges changed=1",
+              "score": 0.2,
+              "verdict": "BLOCK"
+            },
+            {
+              "step": 4,
+              "action": "trim_feedback_without_capability changed=1",
+              "score": 0.04,
+              "verdict": "BLOCK"
+            },
+            {
+              "step": 5,
+              "action": "add_required_edges changed=1",
+              "score": 0.2,
+              "verdict": "BLOCK"
+            },
+            {
+              "step": 6,
+              "action": "trim_feedback_without_capability changed=1",
+              "score": 0.04,
+              "verdict": "BLOCK"
+            },
+            {
+              "step": 7,
+              "action": "add_required_edges changed=1",
+              "score": 0.2,
+              "verdict": "BLOCK"
+            }
+          ],
+          "best_solution": {
+            "id": "task_010_feedback_ok",
+            "edges": [
+              [
+                "UI",
+                "Service",
+                "SYNC_CALL"
+              ],
+              [
+                "Service",
+                "DB",
+                "SYNC_CALL"
+              ],
+              [
+                "Observer",
+                "UI",
+                "FEEDBACK"
+              ]
+            ]
+          },
+          "best_report": {
+            "task_id": "task_010_feedback_ok",
+            "verdict": "BLOCK",
+            "risk": 0.8,
+            "score": 0.2,
+            "dna": "C0 L0 D0 H3",
+            "metrics": {
+              "N": 4,
+              "E": 3,
+              "density": 0.25,
+              "entropy": 0.347,
+              "strict_cycle_nodes": 0,
+              "layer_viol": 0,
+              "deadly_pairs": 0,
+              "strict_count": 2,
+              "feedback_count": 1,
+              "event_count": 0
+            },
+            "antidote": {
+              "feedback_cap_viol": 1,
+              "feedback_quota_viol": 0,
+              "event_cap_viol": 0,
+              "event_core_hits": 0
+            },
+            "violations": {
+              "goal_failed": false
+            }
+          }
+        }
+      ]
+    }
+  }
+}
