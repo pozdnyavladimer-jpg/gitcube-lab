@@ -71,6 +71,24 @@ But the architecture becomes **structurally unstable**.
 LLMs do not naturally perceive this type of risk.
 
 ---
+Conceptual Model
+GitCube can also be understood through a geometric model of architectural space.
+Flower of Life — Reference Lattice
+The Flower represents the discrete space of possible architectures.
+Each node in this lattice corresponds to a possible system topology.
+Agents move through this space by applying structural mutations.
+Sri Yantra — Attractor Field
+The Sri Yantra represents the attractor field of stable architecture.
+Instead of searching randomly, agents move along structural gradients toward lower-risk configurations.
+GraphEval — Structural Energy
+GraphEval measures the structural deviation between the current architecture and a stable attractor state.
+This converts architecture stability into a continuous energy function:
+E(topology) → risk ∈ [0..1]
+In simplified terms:
+Flower → architecture state space
+Sri → navigation field
+GraphEval → structural energy
+Together these components transform architecture design into a navigable topology landscape.
 
 ## Architecture as a physical system
 
