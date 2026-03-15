@@ -4,15 +4,9 @@ run_lab.py
 
 Minimal GitCube Lab runner.
 
-It demonstrates one unified loop:
-1. run a Graph School task with a selected baseline
-2. render the structural pressure field
-3. optionally run the VR comfort kernel demo
-
 Usage:
   export PYTHONPATH=$PWD
   python run_lab.py --task datasets/grapheval/tasks/task_001.json --agent resonance
-  python run_lab.py --task datasets/grapheval/tasks/task_001.json --agent greedy --vr-demo
 """
 
 from __future__ import annotations
@@ -42,7 +36,15 @@ def run_agent(task_path: str, agent_name: str) -> Dict[str, Any]:
         "--task",
         task_path,
     ]
-    out = subprocess.check_output(cmd, text=True)
+
+    try:
+        out = subprocess.check_output(cmd, text=True, stderr=subprocess.STDOUT)
+    except subprocess.CalledProcessError as e:
+        print("AGENT FAILED")
+        print("-" * 80)
+        print(e.output)
+        raise
+
     return json.loads(out)
 
 
