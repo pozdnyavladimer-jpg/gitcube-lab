@@ -191,7 +191,31 @@ Swarm Runtime → agent orchestration
 Together these form a system for **architecture-aware AI agents**.
 
 ---
+# Conceptual Model
 
+Graph School can be understood through two complementary geometric models.
+
+Flower of Life → Reference Lattice
+
+This represents the discrete state space of possible architectures.  
+Every valid architecture is a point in this lattice.
+
+Sri Yantra → Attractor Field
+
+This represents the dynamic navigation field guiding agents toward stable architectures.
+
+Agents do not search randomly.  
+They move along structural pressure gradients toward lower-risk configurations.
+
+GraphEval measures the structural deviation between the current topology and a stable attractor state.
+
+In simplified terms:
+
+Lattice → possible states  
+Attractor → direction of improvement  
+GraphEval → distance to stability
+
+This framing allows Graph School to function not only as a benchmark, but also as an architecture navigation system.
 # Long-Term Vision
 
 Graph School aims to become a benchmark for **AI architecture reasoning**.
