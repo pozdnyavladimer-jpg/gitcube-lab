@@ -3,16 +3,6 @@
 field_visualizer.py
 
 Simple console visualizer for Graph School pressure field.
-
-Shows:
-- resonance mode
-- total pressure
-- component bars
-- mutation priorities
-
-Usage example:
-  export PYTHONPATH=$(pwd)
-  python -m graph_school.visualization.field_visualizer
 """
 
 from __future__ import annotations
@@ -26,7 +16,6 @@ from agent.resonance_controller import (
     mode_to_mutations,
 )
 
-
 BAR_WIDTH = 28
 
 
@@ -35,9 +24,6 @@ def clamp(x: float, lo: float, hi: float) -> float:
 
 
 def bar(value: float, scale: float = 3.0, width: int = BAR_WIDTH) -> str:
-    """
-    Draw a simple ASCII bar.
-    """
     v = clamp(value / scale, 0.0, 1.0)
     filled = int(round(v * width))
     return "█" * filled + "·" * (width - filled)
@@ -92,10 +78,6 @@ def render_field(report: Dict) -> str:
 
 
 def example_report_block() -> Dict:
-    """
-    Demo report compatible with the current resonance controller.
-    This is a synthetic example for visual testing.
-    """
     return {
         "verdict": "BLOCK",
         "cycles": 1.0,
