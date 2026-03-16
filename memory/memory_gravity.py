@@ -5,15 +5,15 @@ memory/memory_gravity.py
 Memory Gravity for GitCube Lab.
 
 Purpose:
-- compare a current report with stored crystal memory
-- compute attraction / repulsion from stored MemoryAtoms / CrystalRecords
+- compare a current report with stored MemoryAtoms from memory/memory.jsonl
+- compute attraction / repulsion from stored structural memory
 - rank stable attractors
-- provide a simple gravity field for future gravity_agent integration
+- provide a simple guidance vector for future gravity_agent integration
 
 Works with:
 - memory.atom.MemoryAtom
-- memory.crystal_memory.CrystalRecord
-- report dicts from GraphEval / run_lab / agents
+- memory.store.MemoryStore
+- report dicts from GraphEval / pipeline / agents
 """
 
 from __future__ import annotations
@@ -21,8 +21,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
-from memory.atom import MemoryAtom, normalize_dna_key
-from memory.crystal_memory import CrystalMemory, CrystalRecord
+from memory.atom import normalize_dna_key
+from memory.store import MemoryStore, Query
 
 
 # ---------------------------------------------------------------------
@@ -123,11 +123,19 @@ def report_flower_area(report: Dict[str, Any]) -> float:
 
 
 def report_band(report: Dict[str, Any]) -> int:
-    return int(report.get("band", 1))
+    v = report.get("band", 1)
+    try:
+        return int(v)
+    except Exception:
+        return 1
 
 
 def report_phase_state(report: Dict[str, Any]) -> int:
-    return int(report.get("phase_state", 1))
+    v = report.get("phase_state", 1)
+    try:
+        return int(v)
+    except Exception:
+        return 1
 
 
 def jaccard_similarity(a: Sequence[str], b: Sequence[str]) -> float:
@@ -175,41 +183,62 @@ def verdict_weight(verdict: str) -> float:
     return VERDICT_WEIGHT.get(str(verdict).upper(), 0.0)
 
 
+def phase_state_to_octave_and_color(phase_state: int) -> Tuple[int, str]:
+    s = max(1, min(42, int(phase_state)))
+    octave = ((s - 1) // 6) + 1
+
+    labels = {
+        1: "CHAOS",
+        2: "UNSTABLE",
+        3: "FORMING",
+        4: "STRUCTURAL",
+        5: "STABLE",
+        6: "RESONANT",
+        7: "CRYSTAL",
+    }
+    return octave, labels.get(octave, "UNKNOWN")
+
+
+def default_color_for_band(band: int) -> str:
+    palette = {
+        1: "#680000",
+        2: "#9a4700",
+        3: "#c7a500",
+        4: "#729d00",
+        5: "#237d38",
+        6: "#007286",
+        7: "#4b51b8",
+    }
+    return palette.get(int(band), "#888888")
+
+
 # ---------------------------------------------------------------------
 # Canonical view
 # ---------------------------------------------------------------------
 
-def crystal_to_view(rec: CrystalRecord) -> Dict[str, Any]:
-    return {
-        "atom_id": rec.atom_id,
-        "crystal_key": rec.crystal_key,
-        "verdict": rec.verdict,
-        "risk": rec.risk,
-        "dna": rec.dna,
-        "band": rec.band,
-        "phase_state": rec.phase_state,
-        "strength": rec.strength,
-        "flower_area": _num(rec.flower.get("petal_area", 0.0), 0.0),
-        "color_hex": str(rec.spectral.get("hex", "#888888")),
-        "octave": int(rec.spectral.get("octave", 1)),
-        "octave_label": str(rec.spectral.get("octave_label", "UNKNOWN")),
-    }
+def atom_row_to_view(row: Dict[str, Any]) -> Dict[str, Any]:
+    phase_state = int(row.get("phase_state", 1) or 1)
+    band = int(row.get("band", 1) or 1)
+    octave, octave_label = phase_state_to_octave_and_color(phase_state)
 
+    flower = row.get("flower") if isinstance(row.get("flower"), dict) else {}
 
-def atom_to_view(atom: MemoryAtom) -> Dict[str, Any]:
     return {
-        "atom_id": atom.atom_id,
-        "crystal_key": atom.crystal_key,
-        "verdict": atom.verdict,
-        "risk": _num(atom.metrics.get("risk", atom.metrics.get("last_risk", 1.0)), 1.0),
-        "dna": atom.dna,
-        "band": atom.band,
-        "phase_state": atom.phase_state,
-        "strength": atom.strength,
-        "flower_area": _num(atom.flower.get("petal_area", 0.0), 0.0),
-        "color_hex": "#888888",
-        "octave": ((int(atom.phase_state) - 1) // 6) + 1,
-        "octave_label": "UNKNOWN",
+        "atom_id": str(row.get("atom_id", "")),
+        "crystal_key": str(row.get("crystal_key", "")),
+        "verdict": str(row.get("verdict", "WARN")),
+        "risk": _num(
+            (row.get("metrics") or {}).get("risk", (row.get("metrics") or {}).get("last_risk", 1.0)),
+            1.0,
+        ),
+        "dna": str(row.get("dna", "")),
+        "band": band,
+        "phase_state": phase_state,
+        "strength": int(row.get("strength", 1) or 1),
+        "flower_area": _num(flower.get("petal_area", 0.0), 0.0),
+        "color_hex": default_color_for_band(band),
+        "octave": octave,
+        "octave_label": octave_label,
     }
 
 
@@ -284,35 +313,16 @@ def compute_gravity(
     )
 
 
-def rank_crystals(
+def rank_rows(
     report: Dict[str, Any],
-    crystals: List[CrystalRecord],
-    *,
-    top_k: int = 5,
-    only_assembled: bool = True,
-) -> List[GravityHit]:
-    hits: List[GravityHit] = []
-
-    for rec in crystals:
-        if only_assembled and not rec.assembly_ok:
-            continue
-        mv = crystal_to_view(rec)
-        hits.append(compute_gravity(report, mv))
-
-    hits.sort(key=lambda h: h.gravity, reverse=True)
-    return hits[: max(1, int(top_k))]
-
-
-def rank_atoms(
-    report: Dict[str, Any],
-    atoms: List[MemoryAtom],
+    rows: List[Dict[str, Any]],
     *,
     top_k: int = 5,
 ) -> List[GravityHit]:
     hits: List[GravityHit] = []
 
-    for atom in atoms:
-        mv = atom_to_view(atom)
+    for row in rows:
+        mv = atom_row_to_view(row)
         hits.append(compute_gravity(report, mv))
 
     hits.sort(key=lambda h: h.gravity, reverse=True)
@@ -321,9 +331,9 @@ def rank_atoms(
 
 def select_best_attractor(
     report: Dict[str, Any],
-    crystals: List[CrystalRecord],
+    rows: List[Dict[str, Any]],
 ) -> Optional[GravityHit]:
-    hits = rank_crystals(report, crystals, top_k=1, only_assembled=True)
+    hits = rank_rows(report, rows, top_k=1)
     return hits[0] if hits else None
 
 
@@ -333,24 +343,29 @@ def select_best_attractor(
 
 class MemoryGravity:
     """
-    Convenience wrapper over CrystalMemory.
+    Convenience wrapper over MemoryStore.
+
+    Reads from memory/memory.jsonl by default.
     """
 
-    def __init__(self, store_path: str = "memory/crystal_memory.jsonl") -> None:
-        self.memory = CrystalMemory(store_path=store_path)
+    def __init__(self, store_path: str = "memory/memory.jsonl") -> None:
+        self.store = MemoryStore(path=store_path)
+
+    def _load_rows(self) -> List[Dict[str, Any]]:
+        return self.store.query(Query(limit=10000))
 
     def top_hits(self, report: Dict[str, Any], top_k: int = 5) -> List[GravityHit]:
-        crystals = self.memory.load_all()
-        return rank_crystals(report, crystals, top_k=top_k, only_assembled=True)
+        rows = self._load_rows()
+        return rank_rows(report, rows, top_k=top_k)
 
     def best_attractor(self, report: Dict[str, Any]) -> Optional[GravityHit]:
-        crystals = self.memory.load_all()
-        return select_best_attractor(report, crystals)
+        rows = self._load_rows()
+        return select_best_attractor(report, rows)
 
     def guidance_vector(self, report: Dict[str, Any]) -> Dict[str, float]:
         """
         Simple derived guidance signal:
-        - positive means drift toward stored stable crystals
+        - positive means drift toward stored stable atoms
         - negative / weak means memory is not informative yet
         """
         hits = self.top_hits(report, top_k=5)
@@ -373,3 +388,42 @@ class MemoryGravity:
             "gravity_max": round(float(gravity_max), 6),
             "confidence": round(float(confidence), 6),
         }
+
+
+# ---------------------------------------------------------------------
+# Demo / CLI
+# ---------------------------------------------------------------------
+
+def main() -> None:
+    import json
+
+    demo_report = {
+        "kind": "GRAPH_EVAL",
+        "verdict": "ALLOW",
+        "risk": 0.12,
+        "dna": "C0 L0 D1 H1",
+        "band": 6,
+        "phase_state": 35,
+        "flower": {
+            "petal_area": 0.08,
+        },
+    }
+
+    mg = MemoryGravity(store_path="memory/memory.jsonl")
+
+    hits = mg.top_hits(demo_report, top_k=5)
+    guidance = mg.guidance_vector(demo_report)
+    best = mg.best_attractor(demo_report)
+
+    out = {
+        "demo_report": demo_report,
+        "best_attractor": best.to_dict() if best else None,
+        "guidance": guidance,
+        "top_hits": [h.to_dict() for h in hits],
+    }
+
+    print(json.dumps(out, ensure_ascii=False, indent=2))
+
+
+if __name__ == "__main__":
+    main()
