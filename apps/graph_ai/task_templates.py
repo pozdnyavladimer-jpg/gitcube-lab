@@ -69,7 +69,6 @@ def detect_architecture(prompt: str) -> str:
 
     Later this can be replaced with LLM reasoning.
     """
-
     p = (prompt or "").lower()
 
     if "microservice" in p or "microservices" in p:
@@ -81,7 +80,7 @@ def detect_architecture(prompt: str) -> str:
     if "clean" in p or "onion" in p or "hexagonal" in p:
         return "clean_arch"
 
-    if "layered" in p or "web app" in p:
+    if "layered" in p or "web app" in p or "webapp" in p:
         return "layered"
 
     return "layered"
