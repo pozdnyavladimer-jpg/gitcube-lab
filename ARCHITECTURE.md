@@ -1,363 +1,259 @@
-# GitCube Lab — Architecture
+---
 
-GitCube Lab is a **structural reasoning system for software architecture**.
+GitCube Architecture
 
-Instead of analyzing individual files or code fragments, GitCube treats a system as a **graph topology** and evaluates its structural stability.
+GitCube is an experimental architecture analysis and repair system.
+It combines structural scoring, repair loops, and a memory field that stores and navigates architectural states.
 
-The system performs five main functions:
+The system is organized into four main layers:
 
-```
-architecture → graph → structural risk → repair → memory
-```
+Core
 
-This creates a loop where architectures are **evaluated, repaired, remembered, and reused**.
+Memory
+
+Control
+
+Panels
+
+
+A separate Research Layer extends the architecture toward the V-Kernel concept.
+
 
 ---
 
-# System Overview
+1. Core Layer
 
-The GitCube pipeline:
+The Core is the structural physics of the system.
 
-```
-Task
-↓
-Graph Builder
-↓
-Structural Risk Engine
-↓
-Structural DNA
-↓
-Repair Environment
-↓
-Memory Atoms
-↓
-Policy Decision
-```
+It evaluates architectural graphs, measures structural stability, and proposes repairs.
 
-Each stage transforms the architecture into a new representation.
+CORE
+├── Graph Input
+│   ├── tasks
+│   ├── generated graphs
+│   └── architecture states
+│
+├── Structural Physics
+│   ├── scorer.py
+│   ├── risk metrics
+│   ├── structural score
+│   ├── verdict
+│   └── DNA representation
+│
+└── Repair Engine
+    ├── gym.py
+    ├── mutations.py
+    ├── benchmark.py
+    └── train.py
 
----
+Responsibilities:
 
-# Core Components
+evaluate architectural topology
 
-GitCube Lab consists of five major subsystems.
+compute structural risk
 
----
+detect dangerous patterns
 
-# 1. Structural Risk Engine
+attempt structural repairs
 
-Location:
 
-```
-apps/grapheval/
-```
-
-Main file:
-
-```
-apps/grapheval/scorer.py
-```
-
-Purpose:
-
-Evaluate the **structural safety of a graph**.
-
-The engine detects:
-
-- cycles
-- layer violations
-- density overload
-- unsafe feedback channels
-- structural entropy
-
-Output:
-
-```
-risk ∈ [0..1]
-verdict ∈ {ALLOW, WARN, BLOCK}
-```
-
-This engine acts as the **physics layer of architecture**.
 
 ---
 
-# 2. Structural DNA
+2. Memory Layer
 
-GitCube converts structural metrics into a compact symbolic representation.
+Memory stores structural states, not just logs.
 
-Example:
+Each stored state represents an architectural configuration and its outcome.
 
-```
-Cx Lx Dx Hx
-```
+MEMORY
+├── Memory Atoms
+│   ├── atom.py
+│   ├── dna_key
+│   ├── crystal_key
+│   ├── band
+│   ├── phase_state
+│   └── flower invariant
+│
+├── Memory Store
+│   ├── store.py
+│   └── memory.jsonl
+│
+├── Crystal Layer
+│   ├── crystal_memory.py
+│   ├── spectral tags
+│   ├── octave labels
+│   └── assembly validation
+│
+└── Memory Field
+    ├── memory_gravity.py
+    ├── similarity metrics
+    ├── attraction / repulsion
+    ├── attractor ranking
+    └── guidance vector
 
-or expanded version:
+Responsibilities:
 
-```
-G P C M D T E K
-```
+store architectural experience
 
-This symbolic state represents the **architecture condition**.
+compress recurring patterns
 
-Example:
+identify stable structures
 
-```
-G1 P1 C1 M1
-```
+detect dangerous attractors
 
-Meaning:
 
-- architecture pressure rising
-- cycle detected
-- SCC merge pressure
-- structural drift
+Memory therefore acts as a field of structural experience, not just a database.
 
-Structural DNA is the **language used by the system to reason about architecture**.
-
----
-
-# 3. Graph School (Repair Environment)
-
-Location:
-
-```
-agent/
-```
-
-Main files:
-
-```
-agent/gym.py
-agent/mutations.py
-agent/train.py
-agent/benchmark.py
-```
-
-Purpose:
-
-Repair unsafe architectures through mutation search.
-
-Repair loop:
-
-```
-graph
-→ mutate
-→ rescore
-→ keep improvement
-```
-
-Possible mutations:
-
-- remove edges
-- add edges
-- remove feedback
-- split modules
-- reduce density
-
-Graph School allows agents to **learn how to repair unsafe topology**.
 
 ---
 
-# 4. Crystal Memory
+3. Control Layer
 
-Location:
+The Control layer converts evaluation and memory signals into decisions.
 
-```
-memory/
-```
+CONTROL
+├── Policy
+│   ├── policy.py
+│   ├── DIRECT
+│   ├── CAUTIOUS
+│   ├── SANDBOXED
+│   └── BLOCKED
+│
+├── Orchestrator
+│   ├── orchestrator.py
+│   ├── organs.py
+│   ├── schema.py
+│   └── final decision logic
+│
+└── Gravity Agent
+    ├── gravity_agent.py
+    ├── memory_effect detection
+    ├── mode_hint
+    └── recommended_bias
 
-Main files:
+Responsibilities:
 
-```
-memory/atom.py
-memory/store.py
-memory/meta.py
-```
+interpret risk signals
 
-Purpose:
+interpret memory attractors
 
-Store structural states as **Memory Atoms**.
+decide system behavior
 
-Example atom:
+guide the repair loop
 
-```
-{
-  "dna": "G1 P1 C1",
-  "risk": 0.64,
-  "verdict": "WARN",
-  "band": 3
-}
-```
 
-Memory atoms represent **compressed architectural experience**.
+This layer represents the decision-making brain of the system.
 
-They allow the system to remember:
-
-- dangerous patterns
-- safe configurations
-- repair outcomes
-
----
-
-# 5. Swarm Runtime
-
-Location:
-
-```
-agent/orchestrator.py
-```
-
-Purpose:
-
-Coordinate reasoning agents.
-
-Runtime tasks:
-
-- choose repair strategy
-- activate functional organs
-- interpret Structural DNA
-- produce final recommendations
-
-Example workflow:
-
-```
-report → organs → roles → final result
-```
-
-This layer acts as the **control plane of the system**.
 
 ---
 
-# Graph School Benchmark
+4. Panels (Visualization Layer)
 
-GitCube includes a training and benchmarking environment for architecture reasoning.
+Panels are different ways to observe the same system state.
 
-Location:
+They are not part of the core logic but help developers understand the system.
 
-```
-datasets/grapheval/tasks/
-```
+PANELS
+├── Graph Panel
+│   ├── current graph topology
+│   ├── dangerous edges
+│   ├── cycles
+│   └── structural metrics
+│
+├── Memory Panel
+│   ├── strongest memory atoms
+│   ├── attractor states
+│   ├── phase states
+│   ├── band / octave distribution
+│   └── crystal clusters
+│
+├── Repair Panel
+│   ├── attempted mutations
+│   ├── accepted actions
+│   ├── failed paths
+│   └── repair trajectory
+│
+└── Control Panel
+    ├── policy mode
+    ├── gravity guidance
+    ├── confidence
+    └── next action
 
-Benchmark pipeline:
+Panels represent different views of the same architecture state.
 
-```
-task
-→ initial graph
-→ GraphEval
-→ repair loop
-→ best topology
-→ benchmark metrics
-```
-
-This environment tests whether an agent can:
-
-- detect structural risk
-- repair unsafe architectures
-- satisfy constraints
-- converge toward stable topology
-
----
-
-# Memory Loop
-
-GitCube continuously improves through experience.
-
-```
-architecture
-↓
-GraphEval
-↓
-repair attempts
-↓
-best topology
-↓
-Memory Atom
-↓
-policy adaptation
-```
-
-This allows the system to accumulate **architectural knowledge over time**.
 
 ---
 
-# Repository Structure
+5. Research Layer (V-Kernel)
 
-```
-gitcube-lab/
+Above the GitCube architecture sits an experimental research layer.
 
-README.md
-ARCHITECTURE.md
+RESEARCH
+├── V-Kernel
+│   ├── wave model
+│   ├── phase dynamics
+│   ├── symbolic resonance
+│   └── crystal states
+│
+├── Kuramoto oscillator models
+├── flower invariants
+├── phase cycles
+└── attractor fields
 
-apps/
-    grapheval/
+This layer explores theoretical generalizations of the architecture.
 
-agent/
-    gym.py
-    mutations.py
-    train.py
-    benchmark.py
-    orchestrator.py
+GitCube can therefore be seen as a concrete instantiation of the V-Kernel idea.
 
-memory/
-    atom.py
-    store.py
-    meta.py
-
-datasets/
-    grapheval/
-        tasks/
-
-docs/
-    graph_school_benchmark.md
-```
 
 ---
 
-# Conceptual Model
+System Flow
 
-GitCube can be understood as a layered reasoning system.
+The system pipeline can be summarized as:
 
-```
-Input Layer
-    tasks / architecture
+Graph / Task
+→ Core evaluates structure
+→ Repair engine modifies topology
+→ Memory records structural state
+→ Memory field computes attractors
+→ Control layer chooses behavior
+→ Panels visualize the system
 
-Geometry Layer
-    graph topology
-
-Physics Layer
-    structural risk evaluation
-
-Symbol Layer
-    structural DNA
-
-Dynamics Layer
-    repair environment
-
-Memory Layer
-    crystal memory atoms
-
-Control Layer
-    policy + swarm runtime
-```
 
 ---
 
-# Long-Term Vision
+Conceptual Model
 
-GitCube aims to become a **structural reasoning layer for AI agents**.
+The architecture can be understood as four cooperating systems:
 
-Future AI systems will not only generate code but also **design safe architectures**.
+Layer	Role
 
-GitCube enables this by providing:
+Core	structural physics
+Memory	structural experience
+Control	decision making
+Panels	perception
 
-- graph-based system perception
-- structural risk physics
-- topology repair environments
-- memory of architectural patterns
-- policy-aware agent orchestration
 
-In short:
+Together they form a system capable of learning architectural stability over time.
 
-```
-GitCube teaches AI to think like an architect.
-```
+
+---
+
+Long-Term Direction
+
+Future directions include:
+
+attractor field visualization
+
+crystal clustering of architectures
+
+oscillator-based system dynamics
+
+integration with autonomous repair agents
+
+generalization toward V-Kernel architectures
+
+
+
+---
