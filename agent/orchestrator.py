@@ -1,18 +1,6 @@
+# agent/orchestrator.py
 # -*- coding: utf-8 -*-
-"""Swarm orchestrator for GitCube Lab v0.1.
-
-Pipeline:
-- task -> report
-- policy -> execution mode
-- organs -> roles
-- roles -> partial results
-- final result
-
-This is intentionally simple:
-- no heavy ML
-- no async runtime
-- no external services
-"""
+"""Swarm orchestrator for GitCube Lab v0.1."""
 
 from __future__ import annotations
 
@@ -51,7 +39,7 @@ def _band_from_verdict(verdict: str) -> int:
 
 
 # ---------------------------------------------------------
-# Role implementations (minimal v0.1)
+# Role implementations
 # ---------------------------------------------------------
 
 def run_scout(task: Task, state: SwarmState, report: Dict[str, Any]) -> PartialResult:
@@ -70,6 +58,8 @@ def run_scout(task: Task, state: SwarmState, report: Dict[str, Any]) -> PartialR
             "keep low-risk option first",
         ]
 
+    gravity = report.get("gravity_guidance") if isinstance(report.get("gravity_guidance"), dict) else {}
+
     return PartialResult(
         role="scout",
         status="ok",
@@ -77,6 +67,7 @@ def run_scout(task: Task, state: SwarmState, report: Dict[str, Any]) -> PartialR
             "intent": task.intent,
             "context": task.context,
             "options": options,
+            "gravity_bias": gravity.get("recommended_bias", ""),
         },
         notes=["Scout generated candidate directions."],
     )
@@ -101,6 +92,7 @@ def run_critic(task: Task, state: SwarmState, report: Dict[str, Any]) -> Partial
     metrics = report.get("metrics") if isinstance(report.get("metrics"), dict) else {}
     antidote = report.get("antidote") if isinstance(report.get("antidote"), dict) else {}
     violations = report.get("violations") if isinstance(report.get("violations"), dict) else {}
+    gravity = report.get("gravity_guidance") if isinstance(report.get("gravity_guidance"), dict) else {}
 
     if int(metrics.get("strict_cycle_nodes", 0) or 0) > 0:
         notes.append("strict cycle detected")
@@ -119,6 +111,11 @@ def run_critic(task: Task, state: SwarmState, report: Dict[str, Any]) -> Partial
     if bool(violations.get("goal_failed", False)):
         notes.append("goal failed")
 
+    if gravity:
+        effect = str(gravity.get("memory_effect", ""))
+        if effect:
+            notes.append(f"gravity effect: {effect}")
+
     if not notes:
         notes.append("no critical structural issues found")
 
@@ -136,6 +133,8 @@ def run_critic(task: Task, state: SwarmState, report: Dict[str, Any]) -> Partial
 
 def run_memory_agent(task: Task, state: SwarmState, report: Dict[str, Any]) -> PartialResult:
     meta = state.meta_control or {}
+    gravity = report.get("gravity_guidance") if isinstance(report.get("gravity_guidance"), dict) else {}
+
     return PartialResult(
         role="memory_agent",
         status="ok",
@@ -144,6 +143,7 @@ def run_memory_agent(task: Task, state: SwarmState, report: Dict[str, Any]) -> P
             "memory_hits": state.memory_hits,
             "shrink_factor": state.shrink_factor,
             "meta_control": meta,
+            "gravity_guidance": gravity,
         },
         notes=["Memory agent inspected prior structural atoms."],
     )
@@ -193,7 +193,12 @@ def recommend_action(
     report: Dict[str, Any],
     partials: List[PartialResult],
 ) -> str:
+    gravity = report.get("gravity_guidance") if isinstance(report.get("gravity_guidance"), dict) else {}
+    gravity_bias = str(gravity.get("recommended_bias", ""))
+
     if state.mode == "BLOCKED":
+        if gravity_bias == "move_away_from_hazard":
+            return "Block execution. Move away from hazardous topology and re-evaluate."
         return "Block execution. Remove hazardous topology and re-evaluate."
 
     metrics = report.get("metrics") if isinstance(report.get("metrics"), dict) else {}
@@ -209,6 +214,16 @@ def recommend_action(
         return "Route FEEDBACK only through capability-enabled nodes."
     if int(antidote.get("event_core_hits", 0) or 0) > 0:
         return "Prevent EVENT delivery into protected core nodes."
+
+    if gravity_bias == "move_away_from_hazard":
+        return "Prefer mutations that move away from known hazardous memory patterns."
+    if gravity_bias == "prefer_safe_mutations":
+        return "Prefer safe mutations supported by memory guidance."
+    if gravity_bias == "move_toward_stable_pattern":
+        return "Move toward a known stable memory pattern."
+    if gravity_bias == "avoid_similar_failures":
+        return "Avoid mutations similar to prior failed structures."
+
     if state.mode == "SANDBOXED":
         return "Proceed only in sandbox mode and validate proposed edges."
     if state.mode == "CAUTIOUS":
@@ -317,6 +332,15 @@ def orchestrate_report(
     )
 
     notes = [str(state.meta_control.get("reason") or "")] if state.meta_control else []
+
+    gravity = report.get("gravity_guidance") if isinstance(report.get("gravity_guidance"), dict) else {}
+    if gravity:
+        bias = str(gravity.get("recommended_bias", ""))
+        mode_hint = str(gravity.get("mode_hint", ""))
+        if bias:
+            notes.append(f"gravity bias: {bias}")
+        if mode_hint:
+            notes.append(f"gravity mode hint: {mode_hint}")
 
     return FinalResult(
         task_id=task_id,
