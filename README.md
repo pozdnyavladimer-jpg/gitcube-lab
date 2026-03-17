@@ -1,28 +1,3 @@
-# GitCube Lab
-
-Structural Risk Control, Topological Memory & Graph Architecture Benchmark.
-
-GitCube Lab is an experimental system for **architecture reasoning using graph topology**.
-
-Instead of analyzing code line-by-line, GitCube treats software systems as **graphs** and evaluates their structural stability.
-
----
-
-# TL;DR
-
-GitCube turns architecture into a physical model:
-
-```
-graph topology
-→ structural DNA
-→ risk score (0..1)
-→ ALLOW / WARN / BLOCK
-→ repair loop
-→ benchmark metrics
-→ structural memory
-```
-
-The goal is to train AI agents that can **detect and repair architectural instability**.
 
 ---
 # Architecture Pain
