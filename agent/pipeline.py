@@ -8,7 +8,9 @@ from typing import Any, Dict, Optional
 from apps.grapheval.scorer import GraphScorer
 from agent.gym import run_episode
 from agent.orchestrator import orchestrate_task_dict
+from agent.gravity_agent import enrich_report_with_gravity
 from memory.record_crystal import record_crystal
+from memory.atom import MemoryAtom
 
 
 # ---------------------------------------------------------
@@ -47,7 +49,6 @@ def build_initial_solution(task_def: Dict[str, Any]) -> Dict[str, Any]:
         src = srcs[0]
         dst = dsts[0]
 
-        # simple default edge type
         edge_type = "SYNC_CALL" if (layers[i + 1] - layers[i]) <= 1 else "DATA"
         edges.append([src, dst, edge_type])
 
@@ -91,7 +92,6 @@ def report_to_memory(
             },
         )
     except Exception:
-        # Memory failure should not kill the pipeline
         pass
 
 
@@ -112,6 +112,17 @@ def build_agent_task(task_def: Dict[str, Any]) -> Dict[str, Any]:
             "task_id": str(task_def.get("id") or "unknown_task"),
         },
     }
+
+
+def build_state_vector_from_report(report: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Canonical state vector derived from a report.
+
+    Uses MemoryAtom logic so that phase_state / band / flower
+    are computed consistently with memory.
+    """
+    atom = MemoryAtom.from_report(report)
+    return atom.to_state_vector()
 
 
 # ---------------------------------------------------------
@@ -135,6 +146,7 @@ def run_pipeline(
     -> repair episode
     -> best solution
     -> memory atom
+    -> gravity guidance
     -> policy/orchestrator result
     """
 
@@ -176,7 +188,17 @@ def run_pipeline(
     )
 
     # -----------------------------------------------------
-    # 5. Orchestrate final runtime decision
+    # 5. Enrich with gravity guidance
+    # -----------------------------------------------------
+    best_report = enrich_report_with_gravity(
+        best_report,
+        store_path=store_path,
+    )
+
+    state_vector = build_state_vector_from_report(best_report)
+
+    # -----------------------------------------------------
+    # 6. Orchestrate final runtime decision
     # -----------------------------------------------------
     agent_task = build_agent_task(task_def)
 
@@ -188,7 +210,7 @@ def run_pipeline(
     )
 
     # -----------------------------------------------------
-    # 6. Final package
+    # 7. Final package
     # -----------------------------------------------------
     return {
         "task_id": str(task_def.get("id") or "unknown_task"),
@@ -199,6 +221,8 @@ def run_pipeline(
         "attempts": [a.to_dict() for a in episode.attempts],
         "best_solution": best_solution,
         "best_report": best_report,
+        "gravity_guidance": best_report.get("gravity_guidance", {}),
+        "state_vector": state_vector,
         "orchestrated_result": orchestrated,
     }
 
