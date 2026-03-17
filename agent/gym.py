@@ -1,6 +1,6 @@
 # agent/gym.py
 # -*- coding: utf-8 -*-
-"""Architecture Gym v0.3 for GraphEval (memory-aware mutator ordering)."""
+"""Architecture Gym v0.4 for GraphEval (memory-aware mutators + transition policy)."""
 
 from __future__ import annotations
 
@@ -9,13 +9,10 @@ from typing import Any, Dict, List, Tuple
 
 from apps.grapheval.scorer import GraphScorer
 from agent.mutations import MUTATORS, clone_solution, order_mutators
+from agent.memory_policy import rank_mutators_from_history
 from memory.transitions import TransitionStore, build_transition
 from memory.atom import MemoryAtom
 
-
-# ---------------------------------------------------------
-# Data models
-# ---------------------------------------------------------
 
 @dataclass
 class Attempt:
@@ -64,10 +61,6 @@ class Episode:
         }
 
 
-# ---------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------
-
 def score(task: Dict[str, Any], solution: Dict[str, Any]) -> Dict[str, Any]:
     scorer = GraphScorer(task)
     report = scorer.score_solution(solution)
@@ -106,17 +99,6 @@ def _is_better(candidate: Dict[str, Any], current: Dict[str, Any]) -> bool:
 
 
 def enrich_task_with_memory_context(task: Dict[str, Any], report: Dict[str, Any]) -> Dict[str, Any]:
-    """
-    Build a task copy that includes memory-aware context for mutator ordering.
-
-    Right now:
-    - memory_hits is approximated from current report shape
-    - if verdict is ALLOW/WARN and dna_key exists, we assume at least weak memory relevance
-    - risk is taken directly from the current report
-
-    This is intentionally lightweight and can later be replaced with
-    real MemoryGravity / CoreEngine feedback.
-    """
     task2 = dict(task)
 
     verdict = str(report.get("verdict", "")).upper()
@@ -136,10 +118,6 @@ def enrich_task_with_memory_context(task: Dict[str, Any], report: Dict[str, Any]
     }
     return task2
 
-
-# ---------------------------------------------------------
-# Episode loop
-# ---------------------------------------------------------
 
 def run_episode(task: Dict[str, Any], initial_solution: Dict[str, Any], max_steps: int = 6) -> Episode:
     ep = Episode(
@@ -171,7 +149,12 @@ def run_episode(task: Dict[str, Any], initial_solution: Dict[str, Any], max_step
         best_local_action = None
 
         task_with_memory = enrich_task_with_memory_context(task, current_report)
+
         ordered_mutators = order_mutators(task_with_memory, MUTATORS)
+
+        history = transition_store.load_all()
+        if history:
+            ordered_mutators = rank_mutators_from_history(ordered_mutators, history)
 
         for mutator in ordered_mutators:
             action, candidate_solution = mutator(task_with_memory, current_solution)
@@ -216,10 +199,6 @@ def run_episode(task: Dict[str, Any], initial_solution: Dict[str, Any], max_step
 
     return ep
 
-
-# ---------------------------------------------------------
-# Demo tasks
-# ---------------------------------------------------------
 
 def demo_task_009() -> Tuple[Dict[str, Any], Dict[str, Any]]:
     task = {
@@ -303,10 +282,6 @@ def demo_task_010() -> Tuple[Dict[str, Any], Dict[str, Any]]:
 
     return task, weak_solution
 
-
-# ---------------------------------------------------------
-# CLI demo
-# ---------------------------------------------------------
 
 def main() -> None:
     demos = [
