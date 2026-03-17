@@ -1,16 +1,7 @@
+# memory/atom.py
 # -*- coding: utf-8 -*-
 """
 Memory Atom (Topological Memory) — v0.4 (flower-aware)
-
-Adds:
-- flower_cycle -> petal_area (Shoelace)
-- crystal_key = kind + ":" + dna_key  (core key for crystallization)
-- Backward-compatible loading from older JSONL (no crystal_key/flower)
-
-Keeps:
-- Deterministic atom_id (no timestamps / repo / ref included in hash)
-- 42 phase states: 7 bands × 6 phase directions
-- strength + first_seen/last_seen
 """
 
 from __future__ import annotations
@@ -21,10 +12,6 @@ import time
 from dataclasses import dataclass
 from typing import Any, Dict, Optional, Tuple, List
 
-
-# -------------------------------------------------------------------
-# Helpers
-# -------------------------------------------------------------------
 
 def _canon(obj: Any) -> str:
     return json.dumps(obj, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
@@ -38,7 +25,6 @@ def _num(x: Any, default: float = 0.0) -> float:
 
 
 def _q(x: Any, ndigits: int = 6) -> float:
-    """Quantize floats to reduce atom_id explosion (still deterministic)."""
     try:
         return round(float(x), ndigits)
     except Exception:
@@ -94,15 +80,7 @@ def _get_metric(metrics: Dict[str, Any], *names: str, default: float = 0.0) -> f
     return default
 
 
-# -------------------------------------------------------------------
-# Flower math (Shoelace)
-# -------------------------------------------------------------------
-
 def polygon_area(points: List[Tuple[float, float]]) -> float:
-    """
-    Shoelace formula. points: list[(x,y)] with at least 3 points.
-    Returns absolute area.
-    """
     if not points or len(points) < 3:
         return 0.0
     s = 0.0
@@ -115,13 +93,6 @@ def polygon_area(points: List[Tuple[float, float]]) -> float:
 
 
 def extract_flower(report: Dict[str, Any]) -> Dict[str, Any]:
-    """
-    Accepts either:
-      - report["flower_cycle"] = [{"risk":..,"specH":..}, ...]
-      - or report["flower"]["points"] = [[x,y],...]
-    Produces:
-      {"petal_area": float, "points": [[x,y],...]}
-    """
     points: List[Tuple[float, float]] = []
 
     cycle = report.get("flower_cycle")
@@ -148,10 +119,6 @@ def extract_flower(report: Dict[str, Any]) -> Dict[str, Any]:
         "points": [[float(x), float(y)] for (x, y) in points],
     }
 
-
-# -------------------------------------------------------------------
-# Phase logic
-# -------------------------------------------------------------------
 
 def infer_phase_dir(
     report: Dict[str, Any],
@@ -206,10 +173,6 @@ def phase_state_from(band: int, phase_dir: int) -> int:
     return (b - 1) * 6 + d + 1
 
 
-# -------------------------------------------------------------------
-# Memory Atom
-# -------------------------------------------------------------------
-
 @dataclass(frozen=True)
 class MemoryAtom:
     kind: str
@@ -225,11 +188,7 @@ class MemoryAtom:
 
     baseline: Dict[str, Any]
     metrics: Dict[str, Any]
-
-    # flower invariant (petal area)
     flower: Dict[str, Any]
-
-    # crystallization key (core)
     crystal_key: str
 
     strength: int
@@ -237,18 +196,13 @@ class MemoryAtom:
     last_seen: float
 
     context: Dict[str, Any]
-
     atom_id: str
-
-    # ---------------------------------------------------------------
 
     @staticmethod
     def compute_crystal_key(kind: str, dna_key: str) -> str:
         k = str(kind or "").strip() or "NAVIGATOR_REPORT"
         d = str(dna_key or "").strip()
         return f"{k}:{d}" if d else k
-
-    # ---------------------------------------------------------------
 
     @staticmethod
     def compute_atom_id(
@@ -294,8 +248,6 @@ class MemoryAtom:
 
         return hashlib.sha256(_canon(payload).encode("utf-8")).hexdigest()
 
-    # ---------------------------------------------------------------
-
     @classmethod
     def from_report(
         cls,
@@ -325,10 +277,7 @@ class MemoryAtom:
         band = max(1, min(7, band))
 
         phase_state = phase_state_from(band, phase_dir)
-
-        # flower invariant from report (uses flower_cycle points)
         flower = extract_flower(report)
-
         now = time.time()
 
         crystal_key = cls.compute_crystal_key(kind, dna_key)
@@ -373,12 +322,20 @@ class MemoryAtom:
             atom_id=atom_id,
         )
 
-    # ---------------------------------------------------------------
-
     def to_dict(self) -> Dict[str, Any]:
         return self.__dict__
 
-    # ---------------------------------------------------------------
+    def to_state_vector(self) -> Dict[str, Any]:
+        return {
+            "dna": self.dna,
+            "dna_key": self.dna_key,
+            "band": self.band,
+            "phase_state": self.phase_state,
+            "risk": float(self.metrics.get("risk", self.metrics.get("last_risk", 0.0))),
+            "flower_area": float((self.flower or {}).get("petal_area", 0.0)),
+            "crystal_key": self.crystal_key,
+            "strength": self.strength,
+        }
 
     @classmethod
     def from_dict(cls, d: Dict[str, Any]) -> "MemoryAtom":
