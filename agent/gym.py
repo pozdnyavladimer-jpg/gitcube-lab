@@ -1,6 +1,6 @@
 # agent/gym.py
 # -*- coding: utf-8 -*-
-"""Architecture Gym v0.2 for GraphEval."""
+"""Architecture Gym v0.3 for GraphEval (memory-aware mutator ordering)."""
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, List, Tuple
 
 from apps.grapheval.scorer import GraphScorer
-from agent.mutations import MUTATORS, clone_solution
+from agent.mutations import MUTATORS, clone_solution, order_mutators
 from memory.transitions import TransitionStore, build_transition
 from memory.atom import MemoryAtom
 
@@ -105,6 +105,38 @@ def _is_better(candidate: Dict[str, Any], current: Dict[str, Any]) -> bool:
     return cand_risk < curr_risk
 
 
+def enrich_task_with_memory_context(task: Dict[str, Any], report: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Build a task copy that includes memory-aware context for mutator ordering.
+
+    Right now:
+    - memory_hits is approximated from current report shape
+    - if verdict is ALLOW/WARN and dna_key exists, we assume at least weak memory relevance
+    - risk is taken directly from the current report
+
+    This is intentionally lightweight and can later be replaced with
+    real MemoryGravity / CoreEngine feedback.
+    """
+    task2 = dict(task)
+
+    verdict = str(report.get("verdict", "")).upper()
+    dna_key = str(report.get("dna_key", "")).strip()
+    risk = float(report.get("risk", 0.0) or 0.0)
+
+    memory_hits = 0
+    if dna_key:
+        if verdict == "ALLOW":
+            memory_hits = 2
+        elif verdict == "WARN":
+            memory_hits = 1
+
+    task2["memory_context"] = {
+        "memory_hits": int(memory_hits),
+        "risk": float(risk),
+    }
+    return task2
+
+
 # ---------------------------------------------------------
 # Episode loop
 # ---------------------------------------------------------
@@ -138,8 +170,11 @@ def run_episode(task: Dict[str, Any], initial_solution: Dict[str, Any], max_step
         best_local_report = None
         best_local_action = None
 
-        for mutator in MUTATORS:
-            action, candidate_solution = mutator(task, current_solution)
+        task_with_memory = enrich_task_with_memory_context(task, current_report)
+        ordered_mutators = order_mutators(task_with_memory, MUTATORS)
+
+        for mutator in ordered_mutators:
+            action, candidate_solution = mutator(task_with_memory, current_solution)
             candidate_report = score(task, candidate_solution)
 
             if best_local_report is None or _is_better(candidate_report, best_local_report):
