@@ -1,6 +1,6 @@
 # agent/gym.py
 # -*- coding: utf-8 -*-
-"""Architecture Gym v0.4 for GraphEval (memory-aware mutators + transition policy)."""
+"""Architecture Gym v0.5 for GraphEval (predictive memory control)."""
 
 from __future__ import annotations
 
@@ -9,10 +9,14 @@ from typing import Any, Dict, List, Tuple
 
 from apps.grapheval.scorer import GraphScorer
 from agent.mutations import MUTATORS, clone_solution, order_mutators
-from agent.memory_policy import rank_mutators_from_history
+from agent.memory_policy import rank_mutators_from_history, predict_best_action
 from memory.transitions import TransitionStore, build_transition
 from memory.atom import MemoryAtom
 
+
+# ---------------------------------------------------------
+# Data models
+# ---------------------------------------------------------
 
 @dataclass
 class Attempt:
@@ -60,6 +64,10 @@ class Episode:
             "best": self.best_attempt().to_dict() if self.attempts else None,
         }
 
+
+# ---------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------
 
 def score(task: Dict[str, Any], solution: Dict[str, Any]) -> Dict[str, Any]:
     scorer = GraphScorer(task)
@@ -119,6 +127,10 @@ def enrich_task_with_memory_context(task: Dict[str, Any], report: Dict[str, Any]
     return task2
 
 
+# ---------------------------------------------------------
+# Episode loop
+# ---------------------------------------------------------
+
 def run_episode(task: Dict[str, Any], initial_solution: Dict[str, Any], max_steps: int = 6) -> Episode:
     ep = Episode(
         task_id=str(task.get("id") or "unknown_task"),
@@ -149,12 +161,21 @@ def run_episode(task: Dict[str, Any], initial_solution: Dict[str, Any], max_step
         best_local_action = None
 
         task_with_memory = enrich_task_with_memory_context(task, current_report)
-
         ordered_mutators = order_mutators(task_with_memory, MUTATORS)
 
         history = transition_store.load_all()
+        predicted_action = None
+
         if history:
-            ordered_mutators = rank_mutators_from_history(ordered_mutators, history)
+            predicted_action = predict_best_action(
+                str(current_report.get("dna_key", "")),
+                history,
+            )
+            ordered_mutators = rank_mutators_from_history(
+                ordered_mutators,
+                history,
+                dna_key=str(current_report.get("dna_key", "")),
+            )
 
         for mutator in ordered_mutators:
             action, candidate_solution = mutator(task_with_memory, current_solution)
@@ -171,14 +192,14 @@ def run_episode(task: Dict[str, Any], initial_solution: Dict[str, Any], max_step
         if not _is_better(best_local_report, current_report):
             break
 
-        transition_store.append(
-            build_transition(
-                task_id=str(task.get("id") or "unknown_task"),
-                action=str(best_local_action),
-                from_report=current_report,
-                to_report=best_local_report,
-            )
+        transition = build_transition(
+            task_id=str(task.get("id") or "unknown_task"),
+            action=str(best_local_action),
+            from_report=current_report,
+            to_report=best_local_report,
         )
+        transition["predicted_action"] = predicted_action or ""
+        transition_store.append(transition)
 
         current_solution = clone_solution(best_local_solution)
         current_report = best_local_report
@@ -199,6 +220,10 @@ def run_episode(task: Dict[str, Any], initial_solution: Dict[str, Any], max_step
 
     return ep
 
+
+# ---------------------------------------------------------
+# Demo tasks
+# ---------------------------------------------------------
 
 def demo_task_009() -> Tuple[Dict[str, Any], Dict[str, Any]]:
     task = {
@@ -282,6 +307,10 @@ def demo_task_010() -> Tuple[Dict[str, Any], Dict[str, Any]]:
 
     return task, weak_solution
 
+
+# ---------------------------------------------------------
+# CLI demo
+# ---------------------------------------------------------
 
 def main() -> None:
     demos = [
