@@ -1,0 +1,241 @@
+{
+  "benchmark": "Graph School v0.1",
+  "tasks": 10,
+  "pass_at_1": 0.9,
+  "pass_at_3": 0.9,
+  "pass_at_6": 0.9,
+  "mean_initial_score": 0.808,
+  "mean_best_score": 0.92,
+  "repair_gain_mean": 0.112,
+  "block_escape_rate": 0.5,
+  "goal_satisfaction_rate": 1.0,
+  "hard_failures": [
+    "task_010_feedback_ok"
+  ],
+  "items": [
+    {
+      "task_id": "task_001",
+      "title": "Add cache without breaking layers",
+      "attempt_count": 2,
+      "score_initial": 0.04,
+      "verdict_initial": "BLOCK",
+      "score_best": 1.0,
+      "verdict_best": "ALLOW",
+      "risk_best": 0.0,
+      "dna_best": "C0 L0 D0 H3",
+      "goal_failed_best": false,
+      "attempts": [
+        {
+          "step": 0,
+          "action": "initial",
+          "verdict": "BLOCK",
+          "score": 0.04,
+          "risk": 0.8
+        },
+        {
+          "step": 1,
+          "action": "add_required_edges added=1",
+          "verdict": "ALLOW",
+          "score": 1.0,
+          "risk": 0.0
+        }
+      ]
+    },
+    {
+      "task_id": "task_002",
+      "title": "Dependency cycle must be BLOCK",
+      "attempt_count": 1,
+      "score_initial": 1.0,
+      "verdict_initial": "ALLOW",
+      "score_best": 1.0,
+      "verdict_best": "ALLOW",
+      "risk_best": 0.0,
+      "dna_best": "C0 L0 D0 H0",
+      "goal_failed_best": false,
+      "attempts": [
+        {
+          "step": 0,
+          "action": "initial",
+          "verdict": "ALLOW",
+          "score": 1.0,
+          "risk": 0.0
+        }
+      ]
+    },
+    {
+      "task_id": "task_003",
+      "title": "Touch the core: EVENT is OK, SYNC is not",
+      "attempt_count": 1,
+      "score_initial": 1.0,
+      "verdict_initial": "ALLOW",
+      "score_best": 1.0,
+      "verdict_best": "ALLOW",
+      "risk_best": 0.0,
+      "dna_best": "C0 L0 D0 H3",
+      "goal_failed_best": false,
+      "attempts": [
+        {
+          "step": 0,
+          "action": "initial",
+          "verdict": "ALLOW",
+          "score": 1.0,
+          "risk": 0.0
+        }
+      ]
+    },
+    {
+      "task_id": "task_004",
+      "title": "FEEDBACK upward is legal control channel",
+      "attempt_count": 1,
+      "score_initial": 1.0,
+      "verdict_initial": "ALLOW",
+      "score_best": 1.0,
+      "verdict_best": "ALLOW",
+      "risk_best": 0.0,
+      "dna_best": "C0 L0 D0 H3",
+      "goal_failed_best": false,
+      "attempts": [
+        {
+          "step": 0,
+          "action": "initial",
+          "verdict": "ALLOW",
+          "score": 1.0,
+          "risk": 0.0
+        }
+      ]
+    },
+    {
+      "task_id": "task_005",
+      "title": "Dense mesh should hurt (density overload)",
+      "attempt_count": 1,
+      "score_initial": 1.0,
+      "verdict_initial": "ALLOW",
+      "score_best": 1.0,
+      "verdict_best": "ALLOW",
+      "risk_best": 0.0,
+      "dna_best": "C0 L0 D0 H0",
+      "goal_failed_best": false,
+      "attempts": [
+        {
+          "step": 0,
+          "action": "initial",
+          "verdict": "ALLOW",
+          "score": 1.0,
+          "risk": 0.0
+        }
+      ]
+    },
+    {
+      "task_id": "task_006",
+      "title": "OWN indicates composition (allowed)",
+      "attempt_count": 1,
+      "score_initial": 1.0,
+      "verdict_initial": "ALLOW",
+      "score_best": 1.0,
+      "verdict_best": "ALLOW",
+      "risk_best": 0.0,
+      "dna_best": "C0 L0 D0 H2",
+      "goal_failed_best": false,
+      "attempts": [
+        {
+          "step": 0,
+          "action": "initial",
+          "verdict": "ALLOW",
+          "score": 1.0,
+          "risk": 0.0
+        }
+      ]
+    },
+    {
+      "task_id": "task_007",
+      "title": "Pipeline DAG with EVENT bus",
+      "attempt_count": 1,
+      "score_initial": 1.0,
+      "verdict_initial": "ALLOW",
+      "score_best": 1.0,
+      "verdict_best": "ALLOW",
+      "risk_best": 0.0,
+      "dna_best": "C0 L0 D0 H1",
+      "goal_failed_best": false,
+      "attempts": [
+        {
+          "step": 0,
+          "action": "initial",
+          "verdict": "ALLOW",
+          "score": 1.0,
+          "risk": 0.0
+        }
+      ]
+    },
+    {
+      "task_id": "task_008",
+      "title": "Microservices: gateway/auth/billing + analytics via EVENT",
+      "attempt_count": 1,
+      "score_initial": 1.0,
+      "verdict_initial": "ALLOW",
+      "score_best": 1.0,
+      "verdict_best": "ALLOW",
+      "risk_best": 0.0,
+      "dna_best": "C0 L0 D0 H1",
+      "goal_failed_best": false,
+      "attempts": [
+        {
+          "step": 0,
+          "action": "initial",
+          "verdict": "ALLOW",
+          "score": 1.0,
+          "risk": 0.0
+        }
+      ]
+    },
+    {
+      "task_id": "task_009_antidote",
+      "title": "Antidote: prevent fake FEEDBACK and deadly pairs",
+      "attempt_count": 1,
+      "score_initial": 1.0,
+      "verdict_initial": "ALLOW",
+      "score_best": 1.0,
+      "verdict_best": "ALLOW",
+      "risk_best": 0.0,
+      "dna_best": "C0 L0 D0 H3",
+      "goal_failed_best": false,
+      "attempts": [
+        {
+          "step": 0,
+          "action": "initial",
+          "verdict": "ALLOW",
+          "score": 1.0,
+          "risk": 0.0
+        }
+      ]
+    },
+    {
+      "task_id": "task_010_feedback_ok",
+      "title": "Antidote: allow FEEDBACK only via capability adapter",
+      "attempt_count": 2,
+      "score_initial": 0.04,
+      "verdict_initial": "BLOCK",
+      "score_best": 0.2,
+      "verdict_best": "BLOCK",
+      "risk_best": 0.8,
+      "dna_best": "C0 L0 D0 H3",
+      "goal_failed_best": false,
+      "attempts": [
+        {
+          "step": 0,
+          "action": "initial",
+          "verdict": "BLOCK",
+          "score": 0.04,
+          "risk": 0.8
+        },
+        {
+          "step": 1,
+          "action": "add_required_edges added=1",
+          "verdict": "BLOCK",
+          "score": 0.2,
+          "risk": 0.8
+        }
+      ]
+    }
+  ]
+}
