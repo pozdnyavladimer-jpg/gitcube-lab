@@ -1,15 +1,6 @@
+# agent/gym.py
 # -*- coding: utf-8 -*-
-"""Architecture Gym v0.2 for GraphEval.
-
-Goal:
-- take a graph task
-- try graph mutations from agent.mutations
-- score each attempt with GraphScorer
-- keep only improving candidates
-- expose a stable run_episode() API for training
-
-No ML. Pure mutation + scoring loop.
-"""
+"""Architecture Gym v0.2 for GraphEval."""
 
 from __future__ import annotations
 
@@ -18,6 +9,8 @@ from typing import Any, Dict, List, Tuple
 
 from apps.grapheval.scorer import GraphScorer
 from agent.mutations import MUTATORS, clone_solution
+from memory.transitions import TransitionStore, build_transition
+from memory.atom import MemoryAtom
 
 
 # ---------------------------------------------------------
@@ -79,6 +72,13 @@ def score(task: Dict[str, Any], solution: Dict[str, Any]) -> Dict[str, Any]:
     scorer = GraphScorer(task)
     report = scorer.score_solution(solution)
     report["kind"] = "GRAPH_EVAL"
+
+    atom = MemoryAtom.from_report(report)
+    report["dna_key"] = atom.dna_key
+    report["band"] = atom.band
+    report["phase_state"] = atom.phase_state
+    report["flower"] = atom.flower
+
     return report
 
 
@@ -92,11 +92,6 @@ def pretty(report: Dict[str, Any]) -> str:
 
 
 def _is_better(candidate: Dict[str, Any], current: Dict[str, Any]) -> bool:
-    """
-    Better means:
-    1. strictly higher score
-    2. if equal score -> lower risk
-    """
     cand_score = float(candidate.get("score", 0.0) or 0.0)
     curr_score = float(current.get("score", 0.0) or 0.0)
 
@@ -119,6 +114,8 @@ def run_episode(task: Dict[str, Any], initial_solution: Dict[str, Any], max_step
         task_id=str(task.get("id") or "unknown_task"),
         title=str(task.get("title") or ""),
     )
+
+    transition_store = TransitionStore("memory/transitions.jsonl")
 
     current_solution = clone_solution(initial_solution)
     current_report = score(task, current_solution)
@@ -155,6 +152,15 @@ def run_episode(task: Dict[str, Any], initial_solution: Dict[str, Any], max_step
 
         if not _is_better(best_local_report, current_report):
             break
+
+        transition_store.append(
+            build_transition(
+                task_id=str(task.get("id") or "unknown_task"),
+                action=str(best_local_action),
+                from_report=current_report,
+                to_report=best_local_report,
+            )
+        )
 
         current_solution = clone_solution(best_local_solution)
         current_report = best_local_report
