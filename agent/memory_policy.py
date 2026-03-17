@@ -1,9 +1,7 @@
-# agent/memory_policy.py
 # -*- coding: utf-8 -*-
 
 from __future__ import annotations
-
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 
 def _num(x: Any, default: float = 0.0) -> float:
@@ -30,14 +28,28 @@ def action_family(action: str) -> str:
     return "unknown"
 
 
-def build_action_scores(transitions: List[Dict[str, Any]]) -> Dict[str, Dict[str, float]]:
-    """
-    Aggregate transition history by action family.
-    Score = success count + avg risk improvement.
-    """
+def _transition_dna_key(t: Dict[str, Any]) -> str:
+    return str(
+        t.get("dna_key")
+        or t.get("from_dna_key")
+        or t.get("from_dna")
+        or ""
+    ).strip()
+
+
+def build_action_scores(
+    transitions: List[Dict[str, Any]],
+    *,
+    dna_key: Optional[str] = None,
+) -> Dict[str, Dict[str, float]]:
     table: Dict[str, Dict[str, float]] = {}
 
     for t in transitions:
+        if dna_key:
+            td = _transition_dna_key(t)
+            if td and td != dna_key:
+                continue
+
         action = action_family(str(t.get("action", "")))
         if action == "unknown":
             continue
@@ -69,20 +81,50 @@ def build_action_scores(transitions: List[Dict[str, Any]]) -> Dict[str, Dict[str
     return table
 
 
-def rank_mutators_from_history(
-    mutators: List[Any],
+def predict_best_action(
+    dna_key: str,
     transitions: List[Dict[str, Any]],
-) -> List[Any]:
+) -> Optional[str]:
     """
-    Reorder mutators using learned action scores from transition history.
+    Return the historically best action family for a given dna_key.
+    Falls back to global history if no exact dna_key match exists.
     """
-    scores = build_action_scores(transitions)
+    dna_key = str(dna_key or "").strip()
 
-    decorated: List[Tuple[float, Any]] = []
+    local_scores = build_action_scores(transitions, dna_key=dna_key)
+    if local_scores:
+        best = max(local_scores.items(), key=lambda kv: kv[1].get("score", 0.0))
+        return str(best[0])
+
+    global_scores = build_action_scores(transitions)
+    if global_scores:
+        best = max(global_scores.items(), key=lambda kv: kv[1].get("score", 0.0))
+        return str(best[0])
+
+    return None
+
+
+def rank_mutators_from_history(
+    mutators,
+    transitions,
+    *,
+    dna_key: str = "",
+):
+    """
+    Reorder mutators:
+    1. put predicted best action first
+    2. then sort the rest by learned score
+    """
+    best_action = predict_best_action(dna_key, transitions)
+
+    global_scores = build_action_scores(transitions)
+
+    decorated: List[Tuple[int, float, Any]] = []
     for m in mutators:
         fam = action_family(getattr(m, "__name__", ""))
-        score = scores.get(fam, {}).get("score", 0.0)
-        decorated.append((float(score), m))
+        priority = 1 if fam == best_action else 0
+        score = global_scores.get(fam, {}).get("score", 0.0)
+        decorated.append((priority, float(score), m))
 
-    decorated.sort(key=lambda x: x[0], reverse=True)
-    return [m for _, m in decorated]
+    decorated.sort(key=lambda x: (x[0], x[1]), reverse=True)
+    return [m for _, _, m in decorated]
