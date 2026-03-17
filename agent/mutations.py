@@ -3,7 +3,10 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Tuple, Callable
+
+
+Mutator = Callable[[Dict[str, Any], Dict[str, Any]], Tuple[str, Dict[str, Any]]]
 
 
 def edge_key(e: List[Any]) -> Tuple[str, str, str]:
@@ -16,6 +19,98 @@ def clone_solution(sol: Dict[str, Any]) -> Dict[str, Any]:
         "edges": [list(e) for e in sol.get("edges", [])],
     }
 
+
+# ---------------------------------------------------------
+# Memory-aware helpers
+# ---------------------------------------------------------
+
+def get_memory_context(task: Dict[str, Any]) -> Tuple[int, float]:
+    """
+    Read optional memory-guidance hints from task.
+
+    Supported keys:
+      task["memory_context"] = {
+          "memory_hits": int,
+          "risk": float,
+      }
+
+    If absent, defaults to:
+      memory_hits = 0
+      risk = 0.0
+    """
+    ctx = task.get("memory_context")
+    if not isinstance(ctx, dict):
+        return 0, 0.0
+
+    memory_hits = int(ctx.get("memory_hits", 0) or 0)
+    risk = float(ctx.get("risk", 0.0) or 0.0)
+    return memory_hits, risk
+
+
+def apply_memory_bias(mutators: List[Mutator], memory_hits: int, risk: float) -> List[Mutator]:
+    """
+    Reorder mutators based on memory and structural risk.
+
+    Rules:
+    - if memory is present and risk is low -> prefer stabilizing / conservative actions
+    - if risk is high -> prefer destructive cleanup first
+    - otherwise keep default order
+    """
+    if not mutators:
+        return mutators
+
+    names = {m.__name__: m for m in mutators}
+
+    safe_order = [
+        "remove_forbidden_edges",
+        "remove_reverse_feedback_deadly_pairs",
+        "trim_feedback_without_capability",
+        "add_required_edges",
+        "reroute_feedback_via_adapter",
+    ]
+
+    aggressive_order = [
+        "remove_reverse_feedback_deadly_pairs",
+        "remove_forbidden_edges",
+        "trim_feedback_without_capability",
+        "reroute_feedback_via_adapter",
+        "add_required_edges",
+    ]
+
+    if memory_hits > 0 and risk < 0.30:
+        ordered_names = safe_order
+    elif risk > 0.70:
+        ordered_names = aggressive_order
+    else:
+        return list(mutators)
+
+    ordered: List[Mutator] = []
+    used = set()
+
+    for name in ordered_names:
+        fn = names.get(name)
+        if fn is not None:
+            ordered.append(fn)
+            used.add(name)
+
+    for fn in mutators:
+        if fn.__name__ not in used:
+            ordered.append(fn)
+
+    return ordered
+
+
+def order_mutators(task: Dict[str, Any], mutators: List[Mutator]) -> List[Mutator]:
+    """
+    Public helper used by gym.py to obtain memory-aware mutator order.
+    """
+    memory_hits, risk = get_memory_context(task)
+    return apply_memory_bias(list(mutators), memory_hits, risk)
+
+
+# ---------------------------------------------------------
+# Mutators
+# ---------------------------------------------------------
 
 def remove_forbidden_edges(task: Dict[str, Any], solution: Dict[str, Any]) -> Tuple[str, Dict[str, Any]]:
     sol = clone_solution(solution)
@@ -135,7 +230,7 @@ def reroute_feedback_via_adapter(task: Dict[str, Any], solution: Dict[str, Any])
     return f"reroute_feedback_via_adapter changed={changed}", sol
 
 
-MUTATORS = [
+MUTATORS: List[Mutator] = [
     remove_forbidden_edges,
     add_required_edges,
     remove_reverse_feedback_deadly_pairs,
