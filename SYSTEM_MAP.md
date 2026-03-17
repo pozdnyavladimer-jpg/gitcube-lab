@@ -1,289 +1,671 @@
+# GitCube Lab — System Map
 
----
+GitCube Lab is a structural learning system for software architecture.
 
-GitCube Lab — System Map
+It does not treat architecture as plain text.
+It treats architecture as:
 
-GitCube Lab — це система для аналізу і ремонту архітектури програм як графів.
+```text
+graph -> risk -> mutation -> memory -> policy -> next action
 
-Замість аналізу окремих файлів система дивиться на топологію залежностей і перевіряє її стабільність.
+The system already contains a closed adaptive loop:
 
-Основний цикл системи:
+structural scoring
 
-perception → evaluation → repair → memory → control
+repair mutations
 
-Тобто:
+transition memory
 
-код → граф → оцінка ризику → ремонт → пам'ять → рішення
+memory-guided policy
 
+runtime orchestration
 
----
-
-Загальний потік системи
-
-INPUT
-архітектура / pull request
-
-↓
-
-GRAPH BUILDER
-будується dependency graph
-
-↓
-
-STRUCTURAL PHYSICS
-GraphEval оцінює ризик структури
-
-↓
-
-risk ∈ [0..1]
-
-↓
-
-SAFE → ALLOW
-UNSAFE → WARN / BLOCK
-
-↓
-
-GRAPH SCHOOL
-агенти пробують ремонтувати граф
-
-↓
-
-CRYSTAL MEMORY
-результат записується як memory atom
-
-↓
-
-SWARM CONTROL
-orchestrator приймає фінальне рішення
-
-↓
-
-FINAL DECISION
 
 
 ---
 
-Основні підсистеми
+1. Core Flow
 
-1. Perception Layer
-
-Файли:
-
-apps/grapheval/schema.py
-
-Завдання:
-
-перетворити код у dependency graph
-
-G = (V,E)
+Task
+  ↓
+Initial Solution
+  ↓
+GraphEval Scorer
+  ↓
+Episode / Mutation Loop
+  ↓
+Best Attempt
+  ↓
+Transition Memory
+  ↓
+Crystal / Atom Memory
+  ↓
+Memory Policy
+  ↓
+Core / Orchestrator Decision
 
 
 ---
 
-2. Structural Physics
+2. High-Level Architecture
 
-Файли:
+apps/grapheval/
+    scorer.py
+        ↓
+agent/gym.py
+    ↙           ↘
+mutations.py   memory_policy.py
+    ↓               ↓
+solution edits   action ranking / prediction
+    ↘               ↙
+      memory/transitions.py
+              ↓
+      memory/atom.py
+      memory/store.py
+      memory/crystal_memory.py
+      memory/memory_gravity.py
+              ↓
+agent/core.py
+agent/run_core.py
+agent/orchestrator.py
+
+
+---
+
+3. Main Layers
+
+3.1 Geometry Layer
+
+Architecture is represented as a directed typed graph.
+
+Nodes
+
+components
+
+services
+
+adapters
+
+protected/core units
+
+
+Edges
+
+SYNC_CALL
+
+DATA
+
+FEEDBACK
+
+EVENT
+
+
+This layer is the spatial form of the system.
+
+
+---
+
+3.2 Physics Layer
+
+Location:
 
 apps/grapheval/scorer.py
 
-Це двигун оцінки ризику.
+Purpose:
 
-Він знаходить:
+evaluate structural stability
 
-cycles
+detect architectural danger
 
-SCC mass
+convert topology into measurable pressure
+
+
+Main outputs:
+
+risk
+
+score
+
+verdict
+
+dna
+
+metrics:
+
+density
+
+entropy
+
+strict cycles
 
 layer violations
 
-dependency density
+deadly pairs
 
-structural entropy
+feedback/event violations
 
 
-Результат:
 
-risk score
-ALLOW / WARN / BLOCK
+This is the structural physics engine.
 
 
 ---
 
-3. Graph School
+3.3 Mutation Layer
 
-Файли:
+Location:
 
-agent/gym.py
 agent/mutations.py
-agent/train.py
-agent/benchmark.py
+agent/gym.py
 
-Це середовище навчання агентів.
+Purpose:
 
-Цикл ремонту:
+generate candidate repairs
 
-graph
-→ mutate
-→ rescore
-→ keep improvement
+attempt local topology improvement
 
-Агенти вчаться:
+compare candidate states
 
-розривати цикли
 
-зменшувати SCC
+Current mutation families:
 
-відновлювати шари
+remove forbidden edges
 
-стабілізувати архітектуру
+add required edges
 
+remove reverse feedback deadly pairs
+
+trim feedback without capability
+
+reroute feedback via adapter
+
+
+This layer is the system’s active repair mechanism.
 
 
 ---
 
-4. Crystal Memory
+3.4 Transition Memory Layer
 
-Файли:
+Location:
+
+memory/transitions.py
+memory/transitions.jsonl
+
+Purpose:
+
+record what action was applied
+
+record from-state and to-state
+
+measure improvement via risk delta
+
+accumulate practical structural experience
+
+
+Transition memory stores:
+
+from_dna
+to_dna
+from_risk
+to_risk
+risk_delta
+action
+task_id
+phase transition
+
+This layer stores movement, not only state.
+
+
+---
+
+3.5 Crystal / Atom Memory Layer
+
+Location:
 
 memory/atom.py
 memory/store.py
-memory/meta.py
+memory/crystal_memory.py
+memory/record_crystal.py
+memory/memory_gravity.py
 
-Тут зберігаються Memory Atoms.
+Purpose:
 
-Приклад:
+convert reports into stable memory objects
 
-{ "dna": "G1 P1 C1", "risk": 0.58, "verdict": "WARN", "band": 3 }
+preserve structural attractors
 
-Це стиснена пам'ять архітектурних станів.
+encode symbolic and phase information
+
+allow future gravity-based recall
+
+
+Stored concepts include:
+
+dna
+
+dna_key
+
+crystal_key
+
+band
+
+phase_state
+
+flower.petal_area
+
+strength
+
+verdict
+
+risk
+
+
+This layer stores stabilized architectural knowledge.
 
 
 ---
 
-5. Swarm Control
+3.6 Memory Policy Layer
 
-Файл:
+Location:
 
+agent/memory_policy.py
+
+Purpose:
+
+inspect transition history
+
+estimate which action family works best
+
+rank candidate mutators
+
+move from passive logging to active guidance
+
+
+Current role:
+
+action family scoring
+
+success-rate aggregation
+
+risk-gain aggregation
+
+mutator ranking from history
+
+predictive bias by dna_key
+
+
+This is the first real memory-to-action bridge.
+
+
+---
+
+3.7 Runtime / Decision Layer
+
+Location:
+
+agent/core.py
+agent/run_core.py
 agent/orchestrator.py
+agent/organs.py
+agent/policy.py
 
-Це мозок системи.
+Purpose:
 
-Він:
+interpret structural state
 
-читає structural DNA
+call memory
 
-активує органи агентів
+build runtime recommendation
 
-обирає режим
+coordinate roles
 
-формує фінальне рішення
+
+Current agents / roles:
+
+scout
+
+critic
+
+memory_agent
+
+builder
+
+
+This layer produces the final control output.
+
+
+---
+
+4. Functional Loop
+
+The current adaptive loop is:
+
+1. Build or receive graph task
+2. Score current topology
+3. Detect structural danger
+4. Try candidate mutations
+5. Keep only better attempt
+6. Record transition
+7. Record memory atom / crystal
+8. Query memory policy
+9. Bias next repair direction
+10. Produce final recommendation
+
+
+---
+
+5. Current Data Objects
+
+5.1 Report
+
+Produced by GraphEval.
+
+Contains:
+
+task_id
+
+verdict
+
+risk
+
+score
+
+dna
+
+metrics
+
+antidote
+
+violations
 
 
 
 ---
 
-Structural DNA
+5.2 Attempt
 
-GitCube переводить архітектуру у символи:
+Produced by Gym.
 
-G P C M D T E K
+Contains:
 
-де:
+step
 
-G — Gate (ALLOW/WARN/BLOCK)
-P — Pressure (entropy)
-C — Cycles
-M — SCC merge
-D — Density
-T — Drift
-E — Edge risk
-K — Scale
+action
 
-Приклад:
+solution
 
-G1 P1 C1 M0 D0 T1
+report
 
-Це компактний опис стану архітектури.
 
 
 ---
 
-Навчальний цикл системи
+5.3 Transition
 
-task
-↓
-graph
-↓
-risk evaluation
-↓
-repair attempts
-↓
-best topology
-↓
-memory atom
-↓
-policy update
+Produced by transition memory.
 
-З часом система накопичує архітектурний досвід.
+Contains:
+
+task_id
+
+action
+
+from_report
+
+to_report
+
+risk_delta
+
+optional predicted bias
+
 
 
 ---
 
-Структура репозиторію
+5.4 Memory Atom
 
-gitcube-lab
+Produced from report.
 
-README.md
-ARCHITECTURE.md
-SYSTEM_MAP.md
+Contains:
+
+kind
+
+verdict
+
+dna
+
+dna_key
+
+band
+
+phase_dir
+
+phase_state
+
+flower
+
+crystal_key
+
+strength
+
+
+
+---
+
+5.5 Gravity Guidance
+
+Produced by memory gravity / core.
+
+Contains:
+
+mode_hint
+
+memory_effect
+
+confidence
+
+gravity_mean
+
+gravity_max
+
+attractor_verdict
+
+attractor_band
+
+attractor_phase_state
+
+recommended_bias
+
+
+
+---
+
+6. Current Behavioral Capabilities
+
+GitCube Lab can already:
+
+score architecture structurally
+
+detect dangerous topology
+
+try repair actions
+
+compare candidate repairs
+
+remember successful transitions
+
+remember stable states
+
+use memory as policy bias
+
+produce role-based runtime recommendation
+
+
+This means the system is no longer static analysis only.
+
+It is now:
+
+structural perception + repair + memory-guided behavior
+
+
+---
+
+7. What Is Already Working
+
+Working now
+
+GraphEval scoring
+
+mutation loop
+
+best-attempt selection
+
+transition logging
+
+atom/crystal memory
+
+gravity-style memory guidance
+
+role-based orchestration
+
+memory-aware mutator ordering
+
+
+Demonstrated outputs
+
+successful repair of forbidden edge topology
+
+memory bias toward stable attractor
+
+ALLOW state convergence in solvable tasks
+
+final recommendation generation
+
+
+
+---
+
+8. Current Limitation
+
+The system still mostly does:
+
+evaluate all candidate mutators
+then choose best result
+
+This is strong, but not yet full memory control.
+
+Memory currently influences:
+
+order
+
+bias
+
+recommendation
+
+
+Memory does not yet fully choose:
+
+direct single-step action without broad evaluation
+
+long-horizon policy
+
+generalized cross-task strategy
+
+
+
+---
+
+9. Next Evolution Stages
+
+Stage 1 — Active Memory Control
+
+Memory predicts which action family should be tried first for the current dna_key.
+
+state -> predicted action -> mutation -> score
+
+Stage 2 — Learned Repair Policy
+
+System accumulates statistics across many tasks and begins selecting actions directly.
+
+state class -> best historical action -> execute
+
+Stage 3 — Attractor Navigation
+
+System no longer thinks in isolated actions only, but in drift toward stable structural basins.
+
+current state -> nearest attractor -> guided repair path
+
+Stage 4 — General Structural Cognition
+
+System learns architectural laws, not only examples.
+
+local repair -> abstract rule -> reusable policy
+
+
+---
+
+10. Conceptual Identity
+
+GitCube Lab is not just:
+
+a linter
+
+a benchmark
+
+a rule engine
+
+a memory log
+
+
+It is becoming:
+
+a structural cognition system for software architecture
+
+Its operating principle is:
+
+topology -> pressure -> mutation -> retention -> guidance -> stability
+
+
+---
+
+11. Minimal Repository Map
+
+gitcube-lab/
 
 apps/
-grapheval/
-scorer.py
-schema.py
+  grapheval/
+    scorer.py
 
 agent/
-gym.py
-mutations.py
-train.py
-benchmark.py
-orchestrator.py
+  core.py
+  run_core.py
+  gym.py
+  mutations.py
+  memory_policy.py
+  orchestrator.py
+  organs.py
+  policy.py
 
 memory/
-atom.py
-store.py
-meta.py
+  atom.py
+  store.py
+  crystal_memory.py
+  record_crystal.py
+  memory_gravity.py
+  transitions.py
+  memory.jsonl
+  transitions.jsonl
 
-datasets/
-grapheval/tasks
-
-docs/
-graph_school_benchmark.md
-
-
----
-
-Мета проекту
-
-GitCube створює AI систему, яка розуміє архітектуру програм.
-
-Система повинна:
-
-читати топологію систем
-
-знаходити структурні ризики
-
-ремонтувати небезпечні архітектури
-
-пам'ятати патерни
-
-допомагати AI проектувати стабільні системи
-
-
-Коротко:
-
-GitCube вчить AI думати як архітектор програмного забезпечення.
+reports/
+traces/
+README.md
+SYSTEM_MAP.md
 
 
 ---
+
+12. One-Sentence Summary
+
+GitCube Lab is a memory-guided structural repair engine that evaluates graph topology, learns from repair transitions, stores stable states as crystals, and moves future architectural decisions toward known attractors.
