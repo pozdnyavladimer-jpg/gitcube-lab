@@ -1,4 +1,16 @@
+## Advanced Memory / Resonance Layer
 
+This project includes a higher-order adaptive memory layer that goes beyond static scoring.
+
+It combines:
+- hexagram-based state encoding
+- ring-weighted memory
+- adaptive exploration
+- self-rewrite behavior control
+
+See full documentation here:
+
+- [docs/RESONANCE_MEMORY.md](docs/RESONANCE_MEMORY.md)
 ---
 # Architecture Pain
 
