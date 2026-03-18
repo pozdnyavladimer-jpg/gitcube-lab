@@ -1,6 +1,6 @@
 # agent/gym.py
 # -*- coding: utf-8 -*-
-"""Architecture Gym v0.5 for GraphEval (predictive memory control)."""
+"""Architecture Gym v0.6 for GraphEval (predictive memory control + spectral bridge)."""
 
 from __future__ import annotations
 
@@ -12,6 +12,7 @@ from agent.mutations import MUTATORS, clone_solution, order_mutators
 from agent.memory_policy import rank_mutators_from_history, predict_best_action
 from memory.transitions import TransitionStore, build_transition
 from memory.atom import MemoryAtom
+from math.spectral_bridge import spectral_state, pretty_spectral
 
 
 # ---------------------------------------------------------
@@ -79,6 +80,9 @@ def score(task: Dict[str, Any], solution: Dict[str, Any]) -> Dict[str, Any]:
     report["band"] = atom.band
     report["phase_state"] = atom.phase_state
     report["flower"] = atom.flower
+
+    # Spectral layer
+    report["spectral"] = spectral_state(report)
 
     return report
 
@@ -199,6 +203,8 @@ def run_episode(task: Dict[str, Any], initial_solution: Dict[str, Any], max_step
             to_report=best_local_report,
         )
         transition["predicted_action"] = predicted_action or ""
+        transition["from_spectral"] = current_report.get("spectral", {})
+        transition["to_spectral"] = best_local_report.get("spectral", {})
         transition_store.append(transition)
 
         current_solution = clone_solution(best_local_solution)
@@ -328,12 +334,14 @@ def main() -> None:
         for attempt in ep.attempts:
             print(f"[step {attempt.step}] {attempt.action}")
             print(" ", pretty(attempt.report))
+            print(" ", pretty_spectral(attempt.report))
             print(" ", "edges:", attempt.solution["edges"])
 
         best = ep.best_attempt()
         print("-" * 80)
         print("BEST:")
         print(" ", pretty(best.report))
+        print(" ", pretty_spectral(best.report))
         print(" ", "action:", best.action)
         print("=" * 80)
         print()
