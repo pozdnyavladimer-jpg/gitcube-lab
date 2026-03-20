@@ -103,22 +103,40 @@ Example:
   "verdict": "WARN"
 }
 ```
-Location: memory/
-Resonance / Adaptive Memory Layer
+Location:
+memory/
+
+---
+
+## Resonance / Adaptive Memory Layer
+
 Higher-order adaptive memory layer that goes beyond static scoring.
+
 Combines:
-hexagram-based state encoding
-ring-weighted memory
-adaptive exploration
-self-rewrite behavior control
-Documentation: docs/RESONANCE_MEMORY.md
-Quickstart
+
+- hexagram-based state encoding  
+- ring-weighted memory  
+- adaptive exploration  
+- self-rewrite behavior control  
+
+📄 Documentation:  
+docs/RESONANCE_MEMORY.md
+
+---
+
+## Quickstart
+
 Clone repository:
+
+```bash
 git clone https://github.com/pozdnyavladimer-jpg/gitcube-lab.git
 cd gitcube-lab
+```
 Verify environment:
 PYTHONPATH=. python -c "import apps.grapheval; print('OK')"
 Run GraphEval:
+PYTHONPATH=. python -m apps.grapheval.runner
+Run benchmark:
 PYTHONPATH=. python -m agent.benchmark
 Repository Navigation
 Core
@@ -137,21 +155,6 @@ reports/
 Documentation
 ARCHITECTURE.md
 SYSTEM_MAP.md
-docs/graph_school_benchmark.md
 docs/RESONANCE_MEMORY.md
-docs/NOW.md
 docs/MAP.md
-Conceptual Model
-GitCube can also be read as a geometric architecture model:
-Flower → architecture state space
-Sri → attractor field of stable design
-GraphEval → structural energy / risk
-Together these components turn architecture into a navigable topology landscape.
-Vision
-GitCube aims to train AI systems that can:
-understand architecture topology
-detect structural risk
-repair unstable graph designs
-accumulate architectural knowledge
-In short:
-GitCube teaches AI to think like a software architect.
+docs/NOW.md
