@@ -1,5 +1,41 @@
 # GitCube Lab
 
+GitCube Lab is a research environment for architecture-level reasoning over software systems.
+
+It models code as a dependency graph, measures structural instability as risk, and trains agents to repair unsafe architectures.
+
+---
+
+👉 Control layer (GSL):
+https://github.com/pozdnyavladimer-jpg/geometric-state-navigator
+
+GSL builds on top of GitCube and uses these structural signals to regulate decisions.
+
+---
+
+## What this repo is
+
+This is not a single tool.
+
+This is a **research environment** that includes:
+
+- graph-based architecture analysis  
+- structural risk modeling  
+- agent-based repair (Graph School)  
+- topological memory  
+
+---
+
+## What this repo is NOT
+
+- not a code generator  
+- not a linter  
+- not a static analyzer  
+
+It operates at the **architecture topology level**.
+
+---
+
 GitCube Lab is a research environment for architecture-level AI reasoning.
 
 It helps agents detect structural instability in software systems, repair unsafe dependency graphs, and accumulate architectural memory over time.
