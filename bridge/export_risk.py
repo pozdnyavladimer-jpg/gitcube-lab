@@ -3,11 +3,6 @@ import sys
 
 
 def simple_graph_risk(payload: dict) -> dict:
-    """
-    Тимчасовий bridge-layer.
-    Якщо вже є справжній GraphEval API — потім замінимо цю функцію на реальний виклик.
-    """
-
     nodes = payload.get("nodes", [])
     edges = payload.get("edges", [])
     layer_violations = payload.get("layer_violations", 0)
@@ -15,7 +10,6 @@ def simple_graph_risk(payload: dict) -> dict:
     node_count = len(nodes)
     edge_count = len(edges)
 
-    # very simple cycle heuristic
     edge_set = {(e["from"], e["to"]) for e in edges if "from" in e and "to" in e}
     has_cycle_2 = any((b, a) in edge_set for (a, b) in edge_set)
 
