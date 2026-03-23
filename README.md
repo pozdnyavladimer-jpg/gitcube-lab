@@ -194,3 +194,69 @@ SYSTEM_MAP.md
 docs/RESONANCE_MEMORY.md
 docs/MAP.md
 docs/NOW.md
+# GitCube Lab
+
+GitCube Lab is the experimental layer of the system.
+
+It generates ideas.
+
+It does not define truth.
+
+---
+
+## 🧪 What Lab does
+
+- explores new agents  
+- experiments with metrics  
+- tests environments  
+- creates candidate logic  
+- produces new patterns  
+
+---
+
+## ⚠️ Important Rule
+
+Lab is not runtime.
+
+Nothing from Lab goes directly into OS.
+
+Everything must pass through Navigator.
+
+---
+
+## 🔁 Promotion Flow
+
+1. Lab generates idea  
+2. Navigator interprets and formalizes  
+3. OS executes and validates  
+
+Only what survives runtime becomes canonical.
+
+---
+
+## 🧠 Example Outputs
+
+- new agent behaviors  
+- alternative scoring systems  
+- experimental environments  
+- state representations  
+
+---
+
+## 🔗 System Architecture
+
+GitCube Lab is part of a 3-layer system:
+
+- GitCube Lab → exploration (this repo)  
+- Geometry Navigator → canonical meaning  
+- GitCube OS → runtime execution  
+
+Flow:
+
+Lab → Navigator → OS  
+
+---
+
+## ⚡ One-line
+
+Lab explores possibilities. It does not decide what is real.
